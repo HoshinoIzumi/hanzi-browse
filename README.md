@@ -174,4 +174,4 @@ cd mcp-server && npm install && npm run build
 
 ## License
 
-MIT
+[Polyform Noncommercial 1.0.0](LICENSE)
