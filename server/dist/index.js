@@ -210,7 +210,7 @@ function openInBrowser(url) {
     exec(`${cmd} "${url}"`);
 }
 // --- Extension connectivity check ---
-async function isExtensionConnected() {
+function checkExtensionOnce() {
     return new Promise((resolve) => {
         const requestId = `status-${Date.now()}-${randomUUID().slice(0, 4)}`;
         const timeout = setTimeout(() => {
@@ -227,6 +227,24 @@ async function isExtensionConnected() {
         connection.onMessage(handler);
         connection.send({ type: "status_query", requestId }).catch(() => resolve(false));
     });
+}
+async function isExtensionConnected() {
+    // Chrome suspends MV3 service workers after ~30s of inactivity, dropping the
+    // WebSocket. The relay pings the extension every 20s to prevent this, but if
+    // the connection was already lost, wait for the keepalive alarm to reconnect.
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY_MS = 3000;
+    for (let i = 0; i < MAX_RETRIES; i++) {
+        if (await checkExtensionOnce())
+            return true;
+        if (i === 0) {
+            console.error("[MCP] Extension not connected, waiting for service worker to wake up...");
+        }
+        if (i < MAX_RETRIES - 1) {
+            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        }
+    }
+    return false;
 }
 setInterval(() => {
     const now = Date.now();
@@ -949,13 +967,13 @@ async function main() {
     connection.onMessage(handleMessage);
     await connection.connect();
     console.error("[MCP] Connected to relay");
-    // Extension connectivity check
+    // Quick extension check at startup (single probe, no retries — don't block startup)
     try {
-        if (await isExtensionConnected()) {
+        if (await checkExtensionOnce()) {
             console.error("[MCP] Extension connected — ready for tasks");
         }
         else {
-            console.error("[MCP] Extension not connected — install from Chrome Web Store and enable it");
+            console.error("[MCP] Extension not connected — will retry when tasks arrive");
         }
     }
     catch {

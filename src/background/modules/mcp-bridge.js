@@ -119,6 +119,12 @@ export function connectToRelay() {
           return;
         }
 
+        // Respond to relay keepalive pings (keeps service worker alive)
+        if (message.type === 'ping') {
+          relaySocket.send(JSON.stringify({ type: 'pong' }));
+          return;
+        }
+
         // Check for pending relay request responses (e.g., credentials_result)
         if (message.requestId && pendingRelayRequests.has(message.requestId)) {
           const pending = pendingRelayRequests.get(message.requestId);

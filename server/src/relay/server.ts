@@ -449,3 +449,13 @@ setInterval(() => {
     log(`Clients: ${clients.size} (ext:${roles.extension} mcp:${roles.mcp} cli:${roles.cli})`);
   }
 }, 30000);
+
+// Ping the extension every 20 seconds to keep its service worker alive.
+// Chrome suspends MV3 service workers after ~30s of inactivity, which drops
+// the WebSocket. Application-level pings (not WS frames) wake the worker.
+setInterval(() => {
+  const ext = getExtension();
+  if (ext && ext.ws.readyState === WebSocket.OPEN) {
+    ext.ws.send(JSON.stringify({ type: 'ping' }));
+  }
+}, 20000);
