@@ -36,6 +36,7 @@ import {
 // Parse command line arguments
 const args = process.argv.slice(2);
 const command = args[0];
+const jsonOutput = args.includes('--json');
 
 let connection: WebSocketClient;
 
@@ -83,8 +84,12 @@ function handleMessage(message: any): void {
       const answer = typeof raw === 'object' ? JSON.stringify(raw, null, 2) : String(raw);
       appendSessionLog(sessionId, `[COMPLETE] ${answer}`);
       writeSessionStatus(sessionId, { status: 'complete', result: answer });
-      console.log(`\n[CLI] Task completed: ${sessionId}`);
-      console.log(answer);
+      if (jsonOutput) {
+        console.log(JSON.stringify({ session_id: sessionId, status: 'completed', result: answer }));
+      } else {
+        console.log(`\n[CLI] Task completed: ${sessionId}`);
+        console.log(answer);
+      }
       pendingResolve?.();
       break;
     }
@@ -212,7 +217,9 @@ function cmdStatus(): void {
     console.log(JSON.stringify(status, null, 2));
   } else {
     const allSessions = listSessions();
-    if (allSessions.length === 0) {
+    if (jsonOutput) {
+      console.log(JSON.stringify(allSessions));
+    } else if (allSessions.length === 0) {
       console.log('No sessions found.');
     } else {
       console.log(`Found ${allSessions.length} session(s):\n`);
