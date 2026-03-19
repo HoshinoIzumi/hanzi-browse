@@ -80,7 +80,7 @@ function handleMessage(message: any): void {
       break;
 
     case 'task_complete': {
-
+      const raw = step || data.result || 'Task completed';
       const result = typeof raw === 'object' ? raw : String(raw);
       const answer = typeof result === 'object' ? JSON.stringify(result, null, 2) : result;
       appendSessionLog(sessionId, `[COMPLETE] ${answer}`);
