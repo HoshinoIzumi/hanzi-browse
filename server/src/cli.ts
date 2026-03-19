@@ -36,6 +36,7 @@ import {
 // Parse command line arguments
 const args = process.argv.slice(2);
 const command = args[0];
+const jsonOutput = args.includes('--json');
 
 let connection: WebSocketClient;
 
@@ -74,17 +75,22 @@ function handleMessage(message: any): void {
       if (step && step !== 'thinking' && !step.startsWith('[thinking]')) {
         appendSessionLog(sessionId, step);
         writeSessionStatus(sessionId, { status: 'running' });
-        console.log(`  ${step.slice(0, 100)}`);
+        if (!jsonOutput) console.log(`  ${step.slice(0, 100)}`);
       }
       break;
 
     case 'task_complete': {
       const raw = step || data.result || 'Task completed';
-      const answer = typeof raw === 'object' ? JSON.stringify(raw, null, 2) : String(raw);
+      const result = typeof raw === 'object' ? raw : String(raw);
+      const answer = typeof result === 'object' ? JSON.stringify(result, null, 2) : result;
       appendSessionLog(sessionId, `[COMPLETE] ${answer}`);
-      writeSessionStatus(sessionId, { status: 'complete', result: answer });
-      console.log(`\n[CLI] Task completed: ${sessionId}`);
-      console.log(answer);
+      writeSessionStatus(sessionId, { status: 'completed', result: answer });
+      if (jsonOutput) {
+        console.log(JSON.stringify({ session_id: sessionId, status: 'completed', result }));
+      } else {
+        console.log(`\n[CLI] Task completed: ${sessionId}`);
+        console.log(answer);
+      }
       pendingResolve?.();
       break;
     }
@@ -92,7 +98,11 @@ function handleMessage(message: any): void {
     case 'task_error':
       appendSessionLog(sessionId, `[ERROR] ${data.error}`);
       writeSessionStatus(sessionId, { status: 'error', error: data.error });
-      console.error(`\n[CLI] Task error: ${data.error}`);
+      if (jsonOutput) {
+        console.log(JSON.stringify({ session_id: sessionId, status: 'error', error: data.error }));
+      } else {
+        console.error(`\n[CLI] Task error: ${data.error}`);
+      }
       pendingResolve?.();
       break;
 
@@ -163,10 +173,12 @@ async function cmdStart(): Promise<void> {
       : skillPrompt;
   }
 
-  console.log('[CLI] Starting browser task...');
-  console.log(`  Task: ${task}`);
-  if (url) console.log(`  URL: ${url}`);
-  if (context) console.log(`  Context: ${context.substring(0, 50)}...`);
+  if (!jsonOutput) {
+    console.log('[CLI] Starting browser task...');
+    console.log(`  Task: ${task}`);
+    if (url) console.log(`  URL: ${url}`);
+    if (context) console.log(`  Context: ${context.substring(0, 50)}...`);
+  }
 
   await initConnection();
 
@@ -189,11 +201,13 @@ async function cmdStart(): Promise<void> {
     context,
   });
 
-  console.log(`\n[CLI] Session: ${sessionId}`);
-  console.log(`  Status: ~/.hanzi-in-chrome/sessions/${sessionId}.json`);
-  console.log(`  Logs:   ~/.hanzi-in-chrome/sessions/${sessionId}.log`);
-  console.log(`  Skills: run \`hanzi-browser skills\` for optimized workflows (e.g. LinkedIn prospecting)`);
-  console.log('\nWaiting for completion...\n');
+  if (!jsonOutput) {
+    console.log(`\n[CLI] Session: ${sessionId}`);
+    console.log(`  Status: ~/.hanzi-in-chrome/sessions/${sessionId}.json`);
+    console.log(`  Logs:   ~/.hanzi-in-chrome/sessions/${sessionId}.log`);
+    console.log(`  Skills: run \`hanzi-browser skills\` for optimized workflows (e.g. LinkedIn prospecting)`);
+    console.log('\nWaiting for completion...\n');
+  }
 
   // Block until task completes
   await waitForTaskCompletion();
@@ -201,7 +215,7 @@ async function cmdStart(): Promise<void> {
 }
 
 function cmdStatus(): void {
-  const sessionId = args[1];
+  const sessionId = args[1]?.startsWith('--') ? undefined : args[1];
 
   if (sessionId) {
     const status = readSessionStatus(sessionId);
@@ -212,7 +226,9 @@ function cmdStatus(): void {
     console.log(JSON.stringify(status, null, 2));
   } else {
     const allSessions = listSessions();
-    if (allSessions.length === 0) {
+    if (jsonOutput) {
+      console.log(JSON.stringify(allSessions));
+    } else if (allSessions.length === 0) {
       console.log('No sessions found.');
     } else {
       console.log(`Found ${allSessions.length} session(s):\n`);
