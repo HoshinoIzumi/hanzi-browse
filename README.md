@@ -2,23 +2,20 @@
 
 **Hanzi** gives your AI agent your real signed-in browser. One tool call, entire task delegated.
 
-Works with Claude Code, Claude Cowork, Cursor, Codex, Windsurf, and more.
+Works with Claude Code, Cursor, Codex, Windsurf, and more.
 
 [![Watch demo](https://img.youtube.com/vi/3tHzg2ps-9w/maxresdefault.jpg)](https://www.youtube.com/watch?v=3tHzg2ps-9w)
 
-## Use Hanzi now
+## Use Hanzi
 
 ```bash
 npx hanzi-in-chrome setup
 ```
 
-Detects your browsers, installs the extension, finds AI agents on your machine (Claude Code, Cursor, etc.), and adds Hanzi to each one.
+Detects your browsers, installs the extension, finds AI agents on your machine, and adds Hanzi to each one. Setup asks how you want to provide the AI:
 
-### Access modes
-
-The CLI sets up **BYOM (bring your own model)** — this is the self-serve path that works today. You provide your own Claude, GPT, or Gemini API key. Everything runs locally.
-
-**Managed access** is a separate path where we handle model routing — no API key needed. It is not yet part of the CLI and is set up separately by request. [Contact us](mailto:hanzili0217@gmail.com?subject=Managed%20access) to get started.
+- **Managed** — we handle the AI. 20 free tasks/month, then $0.05/task. No API key needed.
+- **Bring your own model** — use your Claude Pro/Max subscription, GPT Plus, or any API key. Free forever, runs locally.
 
 <details>
 <summary>Manual setup</summary>
@@ -46,38 +43,28 @@ claude mcp add browser -- npx -y hanzi-in-chrome
 
 3. Credentials — pick one:
    - Claude Pro/Max: uses `claude login` automatically
-   - Codex: run `codex login`
+   - GPT Plus / Codex: run `codex login`
    - API key: set `ANTHROPIC_API_KEY`
+   - Managed: set `HANZI_API_KEY` (get one from [the dashboard](https://api.hanzilla.co/dashboard))
 </details>
 
 ## Build with Hanzi
 
 Embed browser automation in your product. Your app calls the Hanzi API, a real browser executes the task, you get the result back.
 
-### How it works
-
-1. **Get an API key** — [sign in](https://api.hanzilla.co/api/auth/sign-in/social) to open your developer console, then create a key
+1. **Get an API key** — [sign in](https://api.hanzilla.co/dashboard) to your developer console, then create a key
 2. **Pair a browser** — create a pairing token, send your user a pairing link (`/pair/{token}`) — they click it and auto-pair
-3. **Run a task** — call the API with a task and a browser session ID
-4. **Get the result** — poll the task or use `runTask()` which blocks until done
-
-### SDK
-
-The SDK source is in [`sdk/`](https://github.com/hanzili/llm-in-chrome/tree/main/sdk). It is not yet published to npm — clone the repo and install from `sdk/` directly.
+3. **Run a task** — `POST /v1/tasks` with a task and browser session ID
+4. **Get the result** — poll `GET /v1/tasks/:id` until complete, or use `runTask()` which blocks
 
 ```typescript
 import { HanziClient } from '@hanzi/browser-agent';
 
 const client = new HanziClient({ apiKey: process.env.HANZI_API_KEY });
 
-// Create a pairing token for your user
 const { pairingToken } = await client.createPairingToken();
-// → show this token in your UI
-
-// List connected sessions
 const sessions = await client.listSessions();
 
-// Run a task in the user's browser
 const result = await client.runTask({
   browserSessionId: sessions[0].id,
   task: 'Read the patient chart on the current page',
@@ -85,7 +72,7 @@ const result = await client.runTask({
 console.log(result.answer);
 ```
 
-[API reference](https://browse.hanzilla.co/docs.html#build-with-hanzi) · [Sign in](https://api.hanzilla.co/api/auth/sign-in/social) · [Sample integration](examples/partner-quickstart/)
+[API reference](https://browse.hanzilla.co/docs.html#build-with-hanzi) · [Dashboard](https://api.hanzilla.co/dashboard) · [Sample integration](examples/partner-quickstart/)
 
 ## Examples
 
@@ -115,6 +102,17 @@ Reusable workflows. Open source — [add your own](https://github.com/hanzili/ll
 | `browser_status` | Check progress. |
 | `browser_stop` | Stop a task. |
 | `browser_screenshot` | Capture current page as PNG. |
+
+## Pricing
+
+| | Managed | BYOM |
+|--|---------|------|
+| **Price** | $0.05/task (20 free/month) | Free forever |
+| **AI model** | We handle it (Gemini) | Your own key |
+| **Data** | Processed on Hanzi servers | Never leaves your machine |
+| **Billing** | Only completed tasks. Errors are free. | N/A |
+
+Building a product? [Contact us](mailto:hanzili0217@gmail.com?subject=Partner%20pricing) for volume pricing.
 
 ## Development
 

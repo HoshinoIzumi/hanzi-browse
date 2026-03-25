@@ -599,12 +599,12 @@
             <section class="hero">
                 <div class="hero-copy">
                     <h1>Give your AI agent a real browser.</h1>
-                    <p>Your agent stops when it needs a browser. <strong>Hanzi lets it keep going</strong> using your real signed-in session. 20 free tasks/month.</p>
+                    <p>Your agent stops when it needs a browser. <strong>Hanzi lets it keep going</strong> — using your real signed-in Chrome session.</p>
                     <div class="hero-actions">
-                        <a class="btn btn-primary" href="#get-started">Get started free</a>
-                        <a class="btn" href="#byom" style="color: var(--muted);">or bring your own model</a>
+                        <a class="btn btn-green" href="#use-hanzi">Use Hanzi</a>
+                        <a class="btn btn-purple" href="#build-with-hanzi">Build with Hanzi</a>
                     </div>
-                    <p style="margin-top: 14px; font-size: 14px; color: var(--muted);">Works with Claude Code, Cursor, Codex, Windsurf, and more. No API key needed.</p>
+                    <p style="margin-top: 14px; font-size: 14px; color: var(--muted);">Works with Claude Code, Cursor, Codex, Windsurf, and more.</p>
                 </div>
 
                 <div class="demo-panel">
@@ -620,141 +620,55 @@
                 </div>
             </section>
 
-            <!-- Get started -->
-            <section class="section" id="get-started">
+            <!-- Use Hanzi -->
+            <section class="section" id="use-hanzi">
                 <div class="section-head">
                     <div>
-                        <div class="section-kicker">Get started</div>
-                        <h2>One command. Real&nbsp;browser.</h2>
+                        <div class="section-kicker green">Use Hanzi</div>
+                        <h2>Your AI agent gets a real&nbsp;browser.</h2>
                     </div>
-                    <p>Hanzi works as a tool inside your AI agent, or as an API you embed in your own product.</p>
+                    <p>One setup command. Works with Claude Code, Cursor, Codex, and Windsurf. Free to start.</p>
                 </div>
 
                 <div class="path-grid">
-                    <!-- Managed (primary) -->
-                    <div class="path-card" id="use-hanzi" style="border-color: var(--accent);">
-                        <div class="section-kicker" style="margin-bottom: 12px; color: var(--accent-dark);">Recommended</div>
-                        <h3>20 free tasks. No API key needed.</h3>
-                        <p>We handle the AI. You just tell your agent what to do in the browser.</p>
+                    <div class="path-card">
+                        <h3>Get started</h3>
+
+                        <div class="setup-copy" style="margin-bottom: 16px;">
+                            <pre>npx hanzi-in-chrome setup</pre>
+                            <button class="copy-btn" data-copy="npx hanzi-in-chrome setup" onclick="copyData(this)">Copy</button>
+                        </div>
 
                         <div class="path-steps">
                             <div class="path-step">
-                                <span class="step-num" style="background: var(--accent-dark);">1</span>
-                                Run <code>npx hanzi-in-chrome setup</code>
+                                <span class="step-num step-num-green">1</span>
+                                Installs the Chrome extension
                             </div>
                             <div class="path-step">
-                                <span class="step-num" style="background: var(--accent-dark);">2</span>
-                                Choose <strong>Hanzi managed</strong> when prompted
+                                <span class="step-num step-num-green">2</span>
+                                Configures your AI agent (MCP)
                             </div>
                             <div class="path-step">
-                                <span class="step-num" style="background: var(--accent-dark);">3</span>
-                                Sign in with Google, paste your API key
-                            </div>
-                            <div class="path-step">
-                                <span class="step-num" style="background: var(--accent-dark);">4</span>
-                                Ask your agent to do something in the browser
+                                <span class="step-num step-num-green">3</span>
+                                Choose: we handle the AI, or bring your own key
                             </div>
                         </div>
 
                         <div class="mode-row">
                             <div class="mode-pill">
-                                <strong>20 free tasks/month</strong>
-                                <span>Then $0.05 per completed task. Errors and timeouts are free.</span>
+                                <strong>Managed</strong>
+                                <span>We handle the AI. 20 free tasks/month, then $0.05/task.</span>
                             </div>
-                        </div>
-
-                        <div class="setup-copy" style="margin-bottom: 12px;">
-                            <pre>npx hanzi-in-chrome setup</pre>
-                            <button class="copy-btn" data-copy="npx hanzi-in-chrome setup" onclick="copyData(this)">Copy</button>
+                            <div class="mode-pill">
+                                <strong>Bring your own model</strong>
+                                <span>Use your Claude Pro, GPT Plus subscription, or any API key. Free forever, runs locally.</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- BYOM (secondary) -->
-                    <div class="path-card" id="byom">
-                        <div class="section-kicker green" style="margin-bottom: 12px;">Bring your own model</div>
-                        <h3>Free forever. You provide the AI.</h3>
-                        <p>Use your own Claude, GPT, or Gemini API key. Everything runs locally &mdash; no data leaves your machine.</p>
-
-                        <div class="path-steps">
-                            <div class="path-step">
-                                <span class="step-num step-num-green">1</span>
-                                Run <code>npx hanzi-in-chrome setup</code>
-                            </div>
-                            <div class="path-step">
-                                <span class="step-num step-num-green">2</span>
-                                Choose <strong>Use my own model</strong>
-                            </div>
-                            <div class="path-step">
-                                <span class="step-num step-num-green">3</span>
-                                Provide your API key (Claude, GPT, Gemini, or custom)
-                            </div>
-                            <div class="path-step">
-                                <span class="step-num step-num-green">4</span>
-                                Ask your agent to do something in the browser
-                            </div>
-                        </div>
-
-                        <a class="btn btn-green" href="docs.html#use-hanzi">Read the quickstart</a>
-                    </div>
-
-                    <!-- Build with Hanzi -->
-                    <div class="path-card" id="build-with-hanzi">
-                        <div class="section-kicker purple" style="margin-bottom: 12px;">Build with Hanzi</div>
-                        <h3>Add browser automation to your product.</h3>
-                        <p>Pair your users' browsers and run tasks from your backend. Your users see your app &mdash; Hanzi is the runtime underneath.</p>
-
-                        <div class="path-steps">
-                            <div class="path-step">
-                                <span class="step-num step-num-purple">1</span>
-                                Sign in to your developer console
-                            </div>
-                            <div class="path-step">
-                                <span class="step-num step-num-purple">2</span>
-                                Send your user a pairing link — they click it and connect
-                            </div>
-                            <div class="path-step">
-                                <span class="step-num step-num-purple">3</span>
-                                Run a task via the REST API or TypeScript SDK
-                            </div>
-                            <div class="path-step">
-                                <span class="step-num step-num-purple">4</span>
-                                Show results in your app
-                            </div>
-                        </div>
-
-                        <div class="setup-copy" style="margin-top: 0; margin-bottom: 16px;">
-                            <pre>import { HanziClient } from '@hanzi/browser-agent';
-
-const client = new HanziClient({ apiKey: 'hic_...' });
-const result = await client.runTask({
-  browserSessionId: session.id,
-  task: 'Read the patient chart on this page',
-});
-console.log(result.answer);</pre>
-                        </div>
-
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <a class="btn btn-purple" href="docs.html#build-with-hanzi">Developer guide</a>
-                            <a class="btn" href="https://github.com/hanzili/llm-in-chrome/tree/main/examples/partner-quickstart" target="_blank" rel="noreferrer" style="border-color: var(--purple); color: var(--purple);">Sample app</a>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- How it gets used -->
-            <section class="section">
-                <div class="section-head">
-                    <div>
-                        <div class="section-kicker">How it gets used</div>
-                        <h2>Two ways in.</h2>
-                    </div>
-                </div>
-                <div class="prompt-grid">
-                    <div class="prompt-card">
-                        <span>Skills</span>
-                        <h3>Pick a workflow.</h3>
-                        <p>Structured prompts for common jobs. Open source — <a href="https://github.com/hanzili/llm-in-chrome/tree/main/server/skills" target="_blank" rel="noreferrer" style="color: var(--accent-dark); font-weight: 700;">add your own</a>.</p>
-                        <div class="prompt-list">
+                    <div class="path-card">
+                        <h3>What you can do with it</h3>
+                        <div class="prompt-list" style="margin-top: 12px;">
                             <a class="prompt-item" href="linkedin-prospector.html">
                                 <strong>linkedin-prospector</strong>
                                 <code>Find people posting about your topic and send personalized connection requests.</code>
@@ -768,12 +682,10 @@ console.log(result.answer);</pre>
                                 <code>Draft posts and publish from your real signed-in accounts.</code>
                             </div>
                         </div>
-                    </div>
-                    <div class="prompt-card">
-                        <span>Emergent</span>
-                        <h3>Your agent just uses it.</h3>
-                        <p>Mid-task, your agent realizes it needs a browser and calls Hanzi on its own. You don't have to ask.</p>
-                        <div class="prompt-list">
+                        <p style="font-size: 13px; color: var(--muted); margin-top: 14px;">Open source skills — <a href="https://github.com/hanzili/llm-in-chrome/tree/main/server/skills" target="_blank" rel="noreferrer" style="color: var(--accent-dark); font-weight: 600;">add your own</a>.</p>
+
+                        <h3 style="margin-top: 20px;">Or your agent just uses it.</h3>
+                        <div class="prompt-list" style="margin-top: 12px;">
                             <div class="prompt-item">
                                 <code>"Fix the login bug" → agent opens the app to verify the fix works.</code>
                             </div>
@@ -788,14 +700,72 @@ console.log(result.answer);</pre>
                 </div>
             </section>
 
+            <!-- Build with Hanzi -->
+            <section class="section" id="build-with-hanzi">
+                <div class="section-head">
+                    <div>
+                        <div class="section-kicker purple">Build with Hanzi</div>
+                        <h2>Add browser automation to your&nbsp;product.</h2>
+                    </div>
+                    <p>REST API and TypeScript SDK. Your users connect their browser, your backend runs tasks. Hanzi is the runtime underneath.</p>
+                </div>
+
+                <div class="path-grid">
+                    <div class="path-card">
+                        <h3>How it works</h3>
+                        <div class="path-steps">
+                            <div class="path-step">
+                                <span class="step-num step-num-purple">1</span>
+                                <a href="https://api.hanzilla.co/api/auth/sign-in/social" target="_blank" rel="noreferrer" style="color: inherit; font-weight: 600;">Sign in</a> and create an API key
+                            </div>
+                            <div class="path-step">
+                                <span class="step-num step-num-purple">2</span>
+                                Send your user a pairing link &mdash; they click it and connect
+                            </div>
+                            <div class="path-step">
+                                <span class="step-num step-num-purple">3</span>
+                                Run tasks from your backend, show results in your app
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px;">
+                            <a class="btn btn-purple" href="docs.html#build-with-hanzi">Developer guide</a>
+                            <a class="btn" href="https://github.com/hanzili/llm-in-chrome/tree/main/examples/partner-quickstart" target="_blank" rel="noreferrer" style="border-color: var(--purple); color: var(--purple);">Sample app</a>
+                        </div>
+                        <p style="font-size: 13px; color: var(--muted); margin-top: 14px;">Need volume pricing? <a href="mailto:hanzili0217@gmail.com?subject=Partner%20pricing" style="color: var(--purple); font-weight: 600;">Talk to us</a>.</p>
+                    </div>
+
+                    <div class="path-card">
+                        <h3>Quick example</h3>
+                        <div class="setup-copy" style="margin-top: 0;">
+                            <pre>import { HanziClient } from '@hanzi/browser-agent';
+
+const client = new HanziClient({
+  apiKey: process.env.HANZI_API_KEY,
+});
+
+// Pair a browser
+const { pairingToken } = await client.createPairingToken();
+
+// Run a task
+const result = await client.runTask({
+  browserSessionId: session.id,
+  task: 'Read the patient chart on this page',
+});
+
+console.log(result.answer);</pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Pricing -->
             <section class="section" id="pricing">
                 <div class="section-head">
                     <div>
                         <div class="section-kicker">Pricing</div>
-                        <h2>Free to start. Scale when ready.</h2>
+                        <h2>Free to start. Pay per&nbsp;task.</h2>
                     </div>
-                    <p>API access is free during early access. Usage-based pricing coming later.</p>
+                    <p>Only charged for completed tasks. Errors and timeouts are always free.</p>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 700px;">
                     <div class="stack-card" style="padding: 22px; border-color: var(--accent);">
@@ -821,9 +791,6 @@ console.log(result.answer);</pre>
                         </ul>
                     </div>
                 </div>
-                <p style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
-                    Building a product? <a href="mailto:hanzili0217@gmail.com?subject=Partner%20pricing" style="color: var(--accent-dark); font-weight: 600;">Contact us for volume pricing</a> starting at $0.02/task.
-                </p>
             </section>
 
             <!-- Bottom CTA -->
@@ -831,8 +798,8 @@ console.log(result.answer);</pre>
                 <div class="cta-band">
                     <div>
                         <div class="section-kicker">Start here</div>
-                        <h2>One command. 20 free tasks.</h2>
-                        <p>No API key needed. Or <a href="#byom" style="color: var(--green); font-weight: 700;">bring your own model</a> for free unlimited use.</p>
+                        <h2>One command. Real browser.</h2>
+                        <p>Or <a href="docs.html#build-with-hanzi" style="color: var(--purple); font-weight: 700;">read the developer guide</a> to embed Hanzi in your product.</p>
                     </div>
                     <div class="setup-copy">
                         <pre>npx hanzi-in-chrome setup</pre>
