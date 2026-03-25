@@ -70,3 +70,4 @@ docs/internal/
 docs/internal/*
 !docs/internal/MCP_STATUS.md
 .env
+vertex-sa.json

@@ -1054,14 +1054,6 @@ function SettingsModal({ config, onClose }) {
             } })
           ]
         }
-      ),
-      /* @__PURE__ */ u(
-        "button",
-        {
-          class: `tab ${activeTab === "license" ? "active" : ""}`,
-          onClick: () => setActiveTab("license"),
-          children: "License"
-        }
       )
     ] }),
     /* @__PURE__ */ u("div", { class: "modal-body", children: [
@@ -1099,8 +1091,7 @@ function SettingsModal({ config, onClose }) {
           onEdit: handleEditSkill,
           onRemove: config.removeUserSkill
         }
-      ),
-      activeTab === "license" && /* @__PURE__ */ u(LicenseTab, {})
+      )
     ] }),
     /* @__PURE__ */ u("div", { class: "modal-footer", children: [
       /* @__PURE__ */ u("button", { class: "btn btn-secondary", onClick: onClose, children: "Close" }),
@@ -1268,102 +1259,6 @@ function CustomModelsTab({ customModels, newModel, setNewModel, onAdd, onRemove 
         /* @__PURE__ */ u("button", { class: "btn btn-danger btn-sm", onClick: () => onRemove(i), children: "Remove" })
       ] }, i))
     ] })
-  ] });
-}
-function LicenseTab() {
-  var _a, _b;
-  const [status, setStatus] = d(null);
-  const [keyInput, setKeyInput] = d("");
-  const [activating, setActivating] = d(false);
-  const [message, setMessage] = d("");
-  y(() => {
-    chrome.runtime.sendMessage({ type: "GET_LICENSE_STATUS" }, (res) => {
-      if (res) setStatus(res);
-    });
-  }, []);
-  const handleActivate = () => {
-    if (!keyInput.trim()) return;
-    setActivating(true);
-    setMessage("");
-    chrome.runtime.sendMessage({ type: "ACTIVATE_LICENSE", payload: { key: keyInput.trim() } }, (res) => {
-      setActivating(false);
-      setMessage(res.message);
-      if (res.success) {
-        setKeyInput("");
-        chrome.runtime.sendMessage({ type: "GET_LICENSE_STATUS" }, (s) => {
-          if (s) setStatus(s);
-        });
-      }
-    });
-  };
-  const handleDeactivate = () => {
-    chrome.runtime.sendMessage({ type: "DEACTIVATE_LICENSE" }, () => {
-      chrome.runtime.sendMessage({ type: "GET_LICENSE_STATUS" }, (s) => {
-        if (s) setStatus(s);
-      });
-      setMessage("License deactivated.");
-    });
-  };
-  if (!status) return /* @__PURE__ */ u("div", { class: "tab-content", children: /* @__PURE__ */ u("p", { children: "Loading..." }) });
-  return /* @__PURE__ */ u("div", { class: "tab-content", children: [
-    /* @__PURE__ */ u("div", { class: "provider-section", children: [
-      /* @__PURE__ */ u("h4", { children: "Current Plan" }),
-      /* @__PURE__ */ u("p", { class: "provider-desc", style: { fontSize: "1.1em", fontWeight: 500 }, children: status.isPro ? /* @__PURE__ */ u(k, { children: [
-        /* @__PURE__ */ u("span", { class: "status-badge connected", children: "Pro" }),
-        " Unlimited tasks"
-      ] }) : /* @__PURE__ */ u(k, { children: [
-        /* @__PURE__ */ u("span", { class: "status-badge", children: [
-          status.tasksUsed,
-          "/",
-          status.taskLimit,
-          " tasks used"
-        ] }),
-        " Free tier"
-      ] }) })
-    ] }),
-    !status.isPro && /* @__PURE__ */ u("div", { class: "provider-section", children: [
-      /* @__PURE__ */ u("h4", { children: "Upgrade to Pro" }),
-      /* @__PURE__ */ u("p", { class: "provider-desc", children: "Unlimited tasks for a one-time payment of $29." }),
-      /* @__PURE__ */ u(
-        "a",
-        {
-          href: "https://hanziinchrome.lemonsqueezy.com/checkout/buy/5f9be29a-b862-43bf-a440-b4a3cdc9b28e",
-          target: "_blank",
-          class: "btn btn-primary",
-          style: { display: "inline-block", textDecoration: "none", marginBottom: "12px" },
-          children: "Buy Pro — $29"
-        }
-      )
-    ] }),
-    /* @__PURE__ */ u("div", { class: "provider-section", children: [
-      /* @__PURE__ */ u("h4", { children: status.isPro ? "License Key" : "Activate License" }),
-      status.isPro ? /* @__PURE__ */ u("div", { class: "connected-status", children: [
-        /* @__PURE__ */ u("code", { style: { fontSize: "0.85em" }, children: [
-          (_a = status.key) == null ? void 0 : _a.slice(0, 8),
-          "...",
-          (_b = status.key) == null ? void 0 : _b.slice(-4)
-        ] }),
-        /* @__PURE__ */ u("button", { class: "btn btn-secondary btn-sm", onClick: handleDeactivate, children: "Deactivate" })
-      ] }) : /* @__PURE__ */ u("div", { class: "api-key-input", children: [
-        /* @__PURE__ */ u(
-          "input",
-          {
-            type: "text",
-            value: keyInput,
-            onInput: (e) => setKeyInput(e.target.value),
-            placeholder: "Paste license key...",
-            onKeyDown: (e) => e.key === "Enter" && handleActivate()
-          }
-        ),
-        /* @__PURE__ */ u("button", { class: "btn btn-primary", onClick: handleActivate, disabled: activating, children: activating ? "Activating..." : "Activate" })
-      ] }),
-      message && /* @__PURE__ */ u("p", { class: "provider-desc", style: { marginTop: "8px" }, children: message })
-    ] }),
-    !status.isPro && /* @__PURE__ */ u("div", { class: "provider-section", children: /* @__PURE__ */ u("p", { class: "provider-desc", style: { opacity: 0.7, fontSize: "0.85em" }, children: [
-      "Tip: MCP/CLI users can also set the ",
-      /* @__PURE__ */ u("code", { children: "HANZI_IN_CHROME_LICENSE_KEY" }),
-      " environment variable."
-    ] }) })
   ] });
 }
 function SkillsTab({ userSkills, builtInSkills, skillForm, setSkillForm, onAdd, onEdit, onRemove }) {

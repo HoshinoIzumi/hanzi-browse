@@ -293,14 +293,24 @@ function startRelay() {
 }
 // --- Main ---
 async function main() {
-    // 1. Init Vertex AI
+    // 1. Init Vertex AI (optional — managed task execution disabled without it)
     const saJson = process.env.VERTEX_SA_JSON;
-    const saPath = process.env.VERTEX_SA_PATH || "/tmp/hanzi-vertex-sa.json";
+    const saPath = process.env.VERTEX_SA_PATH;
     if (saJson) {
         initVertex(JSON.parse(saJson));
     }
+    else if (saPath) {
+        try {
+            initVertex(saPath);
+        }
+        catch (err) {
+            console.error(`[Server] Vertex AI disabled: ${err.message}`);
+            console.error("[Server] Managed task execution won't work. Set VERTEX_SA_PATH to enable it.");
+        }
+    }
     else {
-        initVertex(saPath);
+        console.error("[Server] Vertex AI not configured (no VERTEX_SA_PATH or VERTEX_SA_JSON).");
+        console.error("[Server] BYOM + dashboard + API work fine. Managed task execution disabled.");
     }
     // 2. Bootstrap workspace + API key
     // In production, warn that auto-bootstrap is a convenience, not long-term behavior.
