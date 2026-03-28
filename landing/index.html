@@ -1095,8 +1095,9 @@ console.log(result.answer);</pre>
         }
 
         async function hanziSignIn() {
+            var apiBase = location.hostname === 'localhost' ? '' : 'https://api.hanzilla.co';
             try {
-                const res = await fetch('/api/auth/sign-in/social', {
+                const res = await fetch(apiBase + '/api/auth/sign-in/social', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -1105,7 +1106,7 @@ console.log(result.answer);</pre>
                 const data = await res.json().catch(() => null);
                 if (data?.url) { window.location.href = data.url; return; }
             } catch {}
-            window.location.href = '/api/auth/sign-in/social?provider=google&callbackURL=/dashboard';
+            window.location.href = apiBase + '/api/auth/sign-in/social?provider=google&callbackURL=/dashboard';
         }
 
         function loadVideo(el) {
