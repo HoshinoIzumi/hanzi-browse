@@ -22,6 +22,7 @@ import { initVertex } from "../llm/vertex.js";
 import { startManagedAPI, initManagedAPI, handleRelayMessage, setStoreModule, onSessionDisconnected, shutdownManagedAPI, recoverStuckTasks } from "./api.js";
 import { initBilling, setBillingStore } from "./billing.js";
 import { WebSocketClient } from "../ipc/websocket-client.js";
+import { initManagedTelemetry, shutdownManagedTelemetry } from "./telemetry.js";
 
 // Dynamic store import — Postgres when DATABASE_URL is set, file-based otherwise
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -359,6 +360,8 @@ function setupRelayHandlers(wss: WebSocketServer): void {
 // --- Main ---
 
 async function main() {
+  initManagedTelemetry();
+
   // 1. Init Vertex AI (optional — managed task execution disabled without it)
   const saJson = process.env.VERTEX_SA_JSON;
   const saPath = process.env.VERTEX_SA_PATH;
@@ -448,6 +451,7 @@ async function handleShutdown(signal: string) {
   console.error(`\n[Server] Received ${signal} — shutting down gracefully...`);
   try {
     await shutdownManagedAPI();
+    await shutdownManagedTelemetry();
   } catch (err: any) {
     console.error(`[Server] Shutdown error:`, err.message);
   }

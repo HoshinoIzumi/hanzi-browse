@@ -22,6 +22,7 @@
 import { createServer, IncomingMessage, ServerResponse } from "http";
 import { randomUUID } from "crypto";
 import { log } from "./log.js";
+import { trackManagedEvent, captureManagedError } from "./telemetry.js";
 import {
   runAgentLoop,
   type AgentLoopResult,
@@ -693,9 +694,12 @@ async function handleCreateTask(
     browserSessionId: browser_session_id,
   });
 
+  trackManagedEvent("task_created", apiKey.workspaceId, { has_url: !!url, has_context: !!context });
+
   const abort = new AbortController();
   taskAborts.set(taskRun.id, abort);
   taskWorkspaceMap.set(taskRun.id, { workspaceId: apiKey.workspaceId, startedAt: Date.now() });
+  const taskStartedAt = Date.now();
 
   // Task-level timeout — abort if agent loop exceeds max duration
   const taskTimeout = setTimeout(() => {
@@ -803,10 +807,13 @@ async function handleCreateTask(
         }
       }
       if (updated) {
+        trackManagedEvent("task_completed", apiKey.workspaceId, { steps: result.steps, duration_ms: Date.now() - taskStartedAt });
         log.info("Task completed", { requestId, taskId: taskRun.id, workspaceId: apiKey.workspaceId }, { status, steps: result.steps });
       }
     })
     .catch(async (err: any) => {
+      trackManagedEvent("task_failed", apiKey.workspaceId, { error: err.message, duration_ms: Date.now() - taskStartedAt });
+      captureManagedError(err, { task_id: taskRun.id, workspace_id: apiKey.workspaceId });
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
           await S.updateTaskRun(taskRun.id, {
@@ -1174,6 +1181,7 @@ async function handleRequest(
         sendJson(req, res, 401, { error: "Invalid, expired, or already consumed pairing token" });
         return;
       }
+      trackManagedEvent("browser_paired", session.workspaceId);
       sendJson(req, res, 201, {
         browser_session_id: session.id,
         session_token: session.sessionToken,
@@ -1201,6 +1209,7 @@ async function handleRequest(
       const label = typeof body.label === "string" ? body.label.slice(0, 200) : undefined;
       const externalUserId = typeof body.external_user_id === "string" ? body.external_user_id.slice(0, 200) : undefined;
       const token = await S.createPairingToken(apiKey.workspaceId, apiKey.id, { label, externalUserId });
+      trackManagedEvent("pairing_link_generated", apiKey.workspaceId);
       sendJson(req, res, 201, {
         pairing_token: token._plainToken,
         expires_at: token.expiresAt,
@@ -1338,6 +1347,7 @@ async function handleRequest(
         return;
       }
       const newKey = await S.createApiKey(apiKey.workspaceId, name);
+      trackManagedEvent("api_key_created", apiKey.workspaceId);
       sendJson(req, res, 201, {
         id: newKey.id,
         key: newKey.key, // plaintext — shown once
