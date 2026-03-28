@@ -956,6 +956,7 @@ function LoadingSkeleton() {
 }
 
 async function signOut() {
+  posthog.reset();
   await fetch('/api/auth/sign-out', { method: 'POST', credentials: 'include' });
   window.location.href = 'https://browse.hanzilla.co';
 }

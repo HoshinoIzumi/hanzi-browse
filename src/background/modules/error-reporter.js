@@ -30,8 +30,10 @@ function createEnvelope(event) {
   return `${header}\n${itemHeader}\n${JSON.stringify(event)}`;
 }
 
+let telemetryEnabled = true; // default on, checked async at init
+
 export function captureError(error, context = {}) {
-  if (!dsn) return;
+  if (!dsn || !telemetryEnabled) return;
 
   const event = {
     level: 'error',
@@ -71,10 +73,18 @@ export function captureError(error, context = {}) {
   }).catch(() => {});
 }
 
-export function initErrorReporting() {
+export async function initErrorReporting() {
   if (!dsn) return;
 
-  // Catch unhandled errors in the service worker
+  // Check opt-out preference
+  try {
+    const stored = await chrome.storage.local.get('telemetry_enabled');
+    if (stored.telemetry_enabled === false) {
+      telemetryEnabled = false;
+      return;
+    }
+  } catch {}
+
   self.addEventListener('error', (event) => {
     captureError(event.error || new Error(event.message), { source: 'unhandled' });
   });

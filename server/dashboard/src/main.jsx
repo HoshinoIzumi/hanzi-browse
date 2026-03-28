@@ -4,7 +4,6 @@ import posthog from 'posthog-js';
 import { App } from './App';
 import './style.css';
 
-// Placeholder — will be replaced with real values in Task 8
 const SENTRY_DSN = 'https://35cbd9c4c23a9e941f292b2ec68adf3b@o4511120870932480.ingest.us.sentry.io/4511120907960320';
 const POSTHOG_KEY = 'phc_SNXFKD8YOBPvBNWWZnuCe7stDsJJNJ5WS8MujKhajIF';
 
