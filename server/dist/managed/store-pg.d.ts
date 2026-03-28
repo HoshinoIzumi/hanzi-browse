@@ -188,4 +188,120 @@ export declare function ensureDefaultWorkspace(): Promise<{
     workspace: Workspace;
     apiKey: ApiKey;
 }>;
+export interface Automation {
+    id: string;
+    workspaceId: string;
+    browserSessionId?: string;
+    type: string;
+    status: "active" | "paused" | "error";
+    config: Record<string, any>;
+    lastRunAt?: number;
+    nextRunAt?: number;
+    consecutiveFailures: number;
+    errorMessage?: string;
+    createdAt: number;
+    updatedAt: number;
+}
+export interface AutomationDraft {
+    id: string;
+    automationId: string;
+    workspaceId: string;
+    scoutTaskId?: string;
+    batchId: string;
+    status: "pending" | "approved" | "edited" | "skipped" | "posted" | "failed";
+    tweetUrl: string;
+    tweetText?: string;
+    tweetAuthorHandle?: string;
+    tweetAuthorName?: string;
+    tweetAuthorBio?: string;
+    tweetAuthorFollowers?: number;
+    tweetEngagement?: Record<string, any>;
+    tweetAgeHours?: number;
+    replyText: string;
+    replyType?: "A" | "B" | "C";
+    replyReasoning?: string;
+    score?: number;
+    postTaskId?: string;
+    postedAt?: number;
+    editedText?: string;
+    createdAt: number;
+}
+export interface EngagementEntry {
+    id: string;
+    workspaceId: string;
+    automationId?: string;
+    draftId?: string;
+    authorHandle: string;
+    replyType?: string;
+    keyword?: string;
+    tweetUrl?: string;
+    tweetSummary?: string;
+    replySummary?: string;
+    postedAt: number;
+}
+export declare function createAutomation(params: {
+    workspaceId: string;
+    browserSessionId: string;
+    type?: string;
+    config: Record<string, any>;
+    nextRunAt?: Date;
+}): Promise<Automation>;
+export declare function getAutomation(id: string): Promise<Automation | null>;
+export declare function listAutomations(workspaceId: string): Promise<Automation[]>;
+export declare function updateAutomation(id: string, workspaceId: string, fields: Partial<{
+    browserSessionId: string;
+    status: Automation["status"];
+    config: Record<string, any>;
+    lastRunAt: Date;
+    nextRunAt: Date | null;
+    consecutiveFailures: number;
+    errorMessage: string | null;
+}>): Promise<Automation | null>;
+export declare function deleteAutomation(id: string, workspaceId: string): Promise<boolean>;
+export declare function getDueAutomations(): Promise<Automation[]>;
+export declare function createDraftBatch(params: {
+    automationId: string;
+    workspaceId: string;
+    scoutTaskId: string;
+    drafts: Array<{
+        tweetUrl: string;
+        tweetText?: string;
+        tweetAuthorHandle?: string;
+        tweetAuthorName?: string;
+        tweetAuthorBio?: string;
+        tweetAuthorFollowers?: number;
+        tweetEngagement?: Record<string, any>;
+        tweetAgeHours?: number;
+        replyText: string;
+        replyType?: "A" | "B" | "C";
+        replyReasoning?: string;
+        score?: number;
+    }>;
+}): Promise<AutomationDraft[]>;
+export declare function listDrafts(workspaceId: string, filters?: {
+    status?: string;
+    automationId?: string;
+    batchId?: string;
+    limit?: number;
+}): Promise<AutomationDraft[]>;
+export declare function getDraft(id: string): Promise<AutomationDraft | null>;
+export declare function updateDraft(id: string, workspaceId: string, fields: Partial<{
+    status: AutomationDraft["status"];
+    editedText: string;
+    postTaskId: string;
+    postedAt: Date;
+}>): Promise<AutomationDraft | null>;
+export declare function logEngagement(params: {
+    workspaceId: string;
+    automationId?: string;
+    draftId?: string;
+    authorHandle: string;
+    replyType?: string;
+    keyword?: string;
+    tweetUrl?: string;
+    tweetSummary?: string;
+    replySummary?: string;
+}): Promise<void>;
+export declare function getRecentlyEngagedHandles(workspaceId: string, daysBack?: number): Promise<string[]>;
+export declare function listEngagements(workspaceId: string, limit?: number): Promise<EngagementEntry[]>;
 export declare function startHeartbeatFlush(): void;

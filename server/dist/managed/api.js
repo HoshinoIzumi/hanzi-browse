@@ -21,6 +21,7 @@
 import { createServer } from "http";
 import { randomUUID } from "crypto";
 import { log } from "./log.js";
+import { trackManagedEvent, captureManagedError } from "./telemetry.js";
 import { runAgentLoop, } from "../agent/loop.js";
 import * as fileStore from "./store.js";
 import { createAuth, resolveSessionToWorkspace, resolveSessionProfile } from "./auth.js";
@@ -34,6 +35,20 @@ let S = fileStore;
  */
 export function setStoreModule(storeModule) {
     S = storeModule;
+}
+function categorizeError(err) {
+    const msg = err.message.toLowerCase();
+    if (msg.includes("timeout"))
+        return "timeout";
+    if (msg.includes("disconnected") || msg.includes("not connected"))
+        return "browser_disconnected";
+    if (msg.includes("rate limit") || msg.includes("429"))
+        return "rate_limited";
+    if (msg.includes("fetch failed") || msg.includes("llm"))
+        return "llm_error";
+    if (msg.includes("abort"))
+        return "aborted";
+    return "internal";
 }
 let isSessionConnectedFn = null;
 let relayPort = 7862;
@@ -609,9 +624,11 @@ async function handleCreateTask(body, apiKey, requestId) {
         context,
         browserSessionId: browser_session_id,
     });
+    trackManagedEvent("task_created", apiKey.workspaceId, { has_url: !!url, has_context: !!context });
     const abort = new AbortController();
     taskAborts.set(taskRun.id, abort);
     taskWorkspaceMap.set(taskRun.id, { workspaceId: apiKey.workspaceId, startedAt: Date.now() });
+    const taskStartedAt = Date.now();
     // Task-level timeout — abort if agent loop exceeds max duration
     const taskTimeout = setTimeout(() => {
         abort.abort();
@@ -720,10 +737,18 @@ async function handleCreateTask(body, apiKey, requestId) {
             }
         }
         if (updated) {
+            trackManagedEvent("task_completed", apiKey.workspaceId, {
+                steps: result.steps,
+                duration_ms: Date.now() - taskStartedAt,
+                input_tokens: result.usage.inputTokens,
+                output_tokens: result.usage.outputTokens,
+            });
             log.info("Task completed", { requestId, taskId: taskRun.id, workspaceId: apiKey.workspaceId }, { status, steps: result.steps });
         }
     })
         .catch(async (err) => {
+        trackManagedEvent("task_failed", apiKey.workspaceId, { error_category: categorizeError(err), duration_ms: Date.now() - taskStartedAt });
+        captureManagedError(err, { task_id: taskRun.id, workspace_id: apiKey.workspaceId });
         for (let attempt = 0; attempt < 2; attempt++) {
             try {
                 await S.updateTaskRun(taskRun.id, {
@@ -1075,6 +1100,7 @@ async function handleRequest(req, res) {
                 sendJson(req, res, 401, { error: "Invalid, expired, or already consumed pairing token" });
                 return;
             }
+            trackManagedEvent("browser_paired", session.workspaceId);
             sendJson(req, res, 201, {
                 browser_session_id: session.id,
                 session_token: session.sessionToken,
@@ -1098,6 +1124,7 @@ async function handleRequest(req, res) {
             const label = typeof body.label === "string" ? body.label.slice(0, 200) : undefined;
             const externalUserId = typeof body.external_user_id === "string" ? body.external_user_id.slice(0, 200) : undefined;
             const token = await S.createPairingToken(apiKey.workspaceId, apiKey.id, { label, externalUserId });
+            trackManagedEvent("pairing_link_generated", apiKey.workspaceId);
             sendJson(req, res, 201, {
                 pairing_token: token._plainToken,
                 expires_at: token.expiresAt,
@@ -1220,6 +1247,7 @@ async function handleRequest(req, res) {
                 return;
             }
             const newKey = await S.createApiKey(apiKey.workspaceId, name);
+            trackManagedEvent("api_key_created", apiKey.workspaceId);
             sendJson(req, res, 201, {
                 id: newKey.id,
                 key: newKey.key, // plaintext — shown once
@@ -1283,11 +1311,255 @@ async function handleRequest(req, res) {
             sendJson(req, res, 200, session);
             return;
         }
+        // ── Automations ───────────────────────────────────────────────────
+        // POST /v1/automations — create a new automation
+        if (method === "POST" && url === "/v1/automations") {
+            const body = await parseBody(req);
+            const { browser_session_id, config } = body;
+            if (!browser_session_id || !config) {
+                sendJson(req, res, 400, { error: "browser_session_id and config are required" });
+                return;
+            }
+            if (!config.keywords?.length || !config.product_name) {
+                sendJson(req, res, 400, { error: "config must include keywords (array) and product_name" });
+                return;
+            }
+            if (!config.schedule_cron) {
+                config.schedule_cron = "0 9 * * 1,3,5"; // default: 3x/week at 9am
+            }
+            const { computeNextRun } = await import("./scheduler.js");
+            const nextRunAt = computeNextRun(config.schedule_cron, config.timezone);
+            const auto = await S.createAutomation({
+                workspaceId: apiKey.workspaceId,
+                browserSessionId: browser_session_id,
+                config,
+                nextRunAt: nextRunAt || undefined,
+            });
+            sendJson(req, res, 201, auto);
+            return;
+        }
+        // GET /v1/automations — list automations for workspace
+        if (method === "GET" && url === "/v1/automations") {
+            const list = await S.listAutomations(apiKey.workspaceId);
+            sendJson(req, res, 200, list);
+            return;
+        }
+        // PATCH /v1/automations/:id — update config, pause/resume
+        const autoMatch = url?.match(/^\/v1\/automations\/([^/]+)$/);
+        if (autoMatch && method === "PATCH") {
+            const autoId = autoMatch[1];
+            const body = await parseBody(req);
+            const fields = {};
+            if (body.status !== undefined)
+                fields.status = body.status;
+            if (body.config !== undefined)
+                fields.config = body.config;
+            if (body.browser_session_id !== undefined)
+                fields.browserSessionId = body.browser_session_id;
+            if (body.config?.schedule_cron || body.status === "active") {
+                const auto = await S.getAutomation(autoId);
+                if (auto) {
+                    const cron = body.config?.schedule_cron || auto.config.schedule_cron;
+                    const tz = body.config?.timezone || auto.config.timezone;
+                    const { computeNextRun } = await import("./scheduler.js");
+                    const next = computeNextRun(cron, tz);
+                    if (next)
+                        fields.nextRunAt = next;
+                }
+            }
+            if (body.status === "active") {
+                fields.consecutiveFailures = 0;
+                fields.errorMessage = null;
+            }
+            const updated = await S.updateAutomation(autoId, apiKey.workspaceId, fields);
+            if (!updated) {
+                sendJson(req, res, 404, { error: "Automation not found" });
+                return;
+            }
+            sendJson(req, res, 200, updated);
+            return;
+        }
+        // DELETE /v1/automations/:id
+        if (autoMatch && method === "DELETE") {
+            const deleted = await S.deleteAutomation(autoMatch[1], apiKey.workspaceId);
+            if (!deleted) {
+                sendJson(req, res, 404, { error: "Automation not found" });
+                return;
+            }
+            sendJson(req, res, 200, { id: autoMatch[1], deleted: true });
+            return;
+        }
+        // GET /v1/automations/drafts — list drafts
+        if (method === "GET" && (url === "/v1/automations/drafts" || url?.startsWith("/v1/automations/drafts?"))) {
+            const params = new URLSearchParams(url?.split("?")[1] || "");
+            const drafts = await S.listDrafts(apiKey.workspaceId, {
+                status: params.get("status") || undefined,
+                automationId: params.get("automation_id") || undefined,
+                limit: params.has("limit") ? parseInt(params.get("limit")) : undefined,
+            });
+            sendJson(req, res, 200, drafts);
+            return;
+        }
+        // PATCH /v1/automations/drafts/:id — approve/edit/skip a draft
+        const draftMatch = url?.match(/^\/v1\/automations\/drafts\/([^/]+)$/);
+        if (draftMatch && method === "PATCH") {
+            const body = await parseBody(req);
+            const fields = {};
+            if (body.status !== undefined)
+                fields.status = body.status;
+            if (body.edited_text !== undefined)
+                fields.editedText = body.edited_text;
+            const updated = await S.updateDraft(draftMatch[1], apiKey.workspaceId, fields);
+            if (!updated) {
+                sendJson(req, res, 404, { error: "Draft not found" });
+                return;
+            }
+            sendJson(req, res, 200, updated);
+            return;
+        }
+        // POST /v1/automations/drafts/:id/post — trigger post task for an approved draft
+        const draftPostMatch = url?.match(/^\/v1\/automations\/drafts\/([^/]+)\/post$/);
+        if (draftPostMatch && method === "POST") {
+            const draft = await S.getDraft(draftPostMatch[1]);
+            if (!draft || draft.workspaceId !== apiKey.workspaceId) {
+                sendJson(req, res, 404, { error: "Draft not found" });
+                return;
+            }
+            if (draft.status !== "approved" && draft.status !== "edited") {
+                sendJson(req, res, 400, { error: `Draft must be approved or edited to post (current: ${draft.status})` });
+                return;
+            }
+            const auto = await S.getAutomation(draft.automationId);
+            if (!auto?.browserSessionId) {
+                sendJson(req, res, 409, { error: "No browser session configured on automation" });
+                return;
+            }
+            const connected = isSessionConnectedFn ? isSessionConnectedFn(auto.browserSessionId) : false;
+            if (!connected) {
+                sendJson(req, res, 409, { error: "Browser session is not connected" });
+                return;
+            }
+            const replyText = draft.editedText || draft.replyText;
+            const { buildPostPrompt } = await import("./scheduler.js");
+            const postPrompt = buildPostPrompt(draft.tweetUrl, replyText);
+            // Run post task in background
+            runInternalTask({
+                workspaceId: apiKey.workspaceId,
+                browserSessionId: auto.browserSessionId,
+                task: postPrompt,
+                url: draft.tweetUrl,
+            }).then(async (result) => {
+                if (result.status === "complete") {
+                    await S.updateDraft(draft.id, apiKey.workspaceId, {
+                        status: "posted",
+                        postTaskId: result.taskId,
+                        postedAt: new Date(),
+                    });
+                    await S.logEngagement({
+                        workspaceId: apiKey.workspaceId,
+                        automationId: draft.automationId,
+                        draftId: draft.id,
+                        authorHandle: draft.tweetAuthorHandle || "unknown",
+                        replyType: draft.replyType,
+                        tweetUrl: draft.tweetUrl,
+                        tweetSummary: draft.tweetText?.slice(0, 200),
+                        replySummary: replyText.slice(0, 200),
+                    });
+                }
+                else {
+                    await S.updateDraft(draft.id, apiKey.workspaceId, {
+                        status: "failed",
+                        postTaskId: result.taskId,
+                    });
+                }
+            }).catch(() => { });
+            sendJson(req, res, 202, { draft_id: draft.id, status: "posting", task_id: "pending" });
+            return;
+        }
+        // POST /v1/automations/drafts/batch-approve — approve multiple drafts
+        if (method === "POST" && url === "/v1/automations/drafts/batch-approve") {
+            const body = await parseBody(req);
+            const { draft_ids } = body;
+            if (!Array.isArray(draft_ids) || draft_ids.length === 0) {
+                sendJson(req, res, 400, { error: "draft_ids array is required" });
+                return;
+            }
+            const results = [];
+            for (const draftId of draft_ids) {
+                const updated = await S.updateDraft(draftId, apiKey.workspaceId, { status: "approved" });
+                results.push({ id: draftId, status: updated ? "approved" : "not_found" });
+            }
+            sendJson(req, res, 200, { results });
+            return;
+        }
+        // GET /v1/automations/engagements — list engagement history
+        if (method === "GET" && (url === "/v1/automations/engagements" || url?.startsWith("/v1/automations/engagements?"))) {
+            const params = new URLSearchParams(url?.split("?")[1] || "");
+            const limit = params.has("limit") ? parseInt(params.get("limit")) : 50;
+            const engagements = await S.listEngagements(apiKey.workspaceId, limit);
+            sendJson(req, res, 200, engagements);
+            return;
+        }
         sendJson(req, res, 404, { error: "Not found" });
     }
     catch (err) {
         log.error("Request error", { requestId }, { method, url, error: err.message });
         sendJson(req, res, 500, { error: err.message, request_id: requestId });
+    }
+}
+/**
+ * Run a task internally (used by scheduler — no HTTP, no auth, no billing).
+ * Returns a promise that resolves when the task completes.
+ */
+export async function runInternalTask(params) {
+    const { workspaceId, browserSessionId, task, url } = params;
+    const taskRun = await S.createTaskRun({
+        workspaceId,
+        apiKeyId: "scheduler",
+        task,
+        url,
+        browserSessionId,
+    });
+    const abort = new AbortController();
+    taskAborts.set(taskRun.id, abort);
+    taskWorkspaceMap.set(taskRun.id, { workspaceId, startedAt: Date.now() });
+    const taskTimeout = setTimeout(() => {
+        abort.abort();
+    }, TASK_TIMEOUT_MS);
+    let currentStep = 0;
+    try {
+        const result = await runAgentLoop({
+            task,
+            url,
+            executeTool: async (toolName, toolInput) => {
+                return executeToolViaRelay(toolName, toolInput, browserSessionId);
+            },
+            onStep: (step) => {
+                currentStep = step.step;
+                void S.updateTaskRun(taskRun.id, { steps: step.step });
+            },
+            maxSteps: 50,
+            signal: abort.signal,
+        });
+        const status = result.status === "complete" ? "complete" : "error";
+        await S.updateTaskRun(taskRun.id, {
+            status: status,
+            answer: result.answer || undefined,
+            steps: result.usage.apiCalls,
+        });
+        return { taskId: taskRun.id, answer: result.answer, status };
+    }
+    catch (err) {
+        try {
+            await S.updateTaskRun(taskRun.id, { status: "error", answer: err.message });
+        }
+        catch { }
+        return { taskId: taskRun.id, status: "error" };
+    }
+    finally {
+        clearTimeout(taskTimeout);
+        taskAborts.delete(taskRun.id);
+        taskWorkspaceMap.delete(taskRun.id);
     }
 }
 export function startManagedAPI(port = 3456) {

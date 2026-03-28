@@ -186,3 +186,16 @@ export declare function ensureDefaultWorkspace(): {
     workspace: Workspace;
     apiKey: ApiKey;
 };
+export declare function createAutomation(_p: any): Promise<any>;
+export declare function getAutomation(_id: string): Promise<any>;
+export declare function listAutomations(_wid: string): Promise<any[]>;
+export declare function updateAutomation(_id: string, _wid: string, _f: any): Promise<any>;
+export declare function deleteAutomation(_id: string, _wid: string): Promise<boolean>;
+export declare function getDueAutomations(): Promise<any[]>;
+export declare function createDraftBatch(_p: any): Promise<any[]>;
+export declare function listDrafts(_wid: string, _f?: any): Promise<any[]>;
+export declare function getDraft(_id: string): Promise<any>;
+export declare function updateDraft(_id: string, _wid: string, _f: any): Promise<any>;
+export declare function logEngagement(_p: any): Promise<void>;
+export declare function getRecentlyEngagedHandles(_wid: string, _d?: number): Promise<string[]>;
+export declare function listEngagements(_wid: string, _l?: number): Promise<any[]>;

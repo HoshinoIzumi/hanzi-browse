@@ -16,9 +16,12 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { randomUUID } from "crypto";
 import { initVertex } from "../llm/vertex.js";
-import { startManagedAPI, initManagedAPI, handleRelayMessage, setStoreModule, onSessionDisconnected, shutdownManagedAPI, recoverStuckTasks } from "./api.js";
+import { startManagedAPI, initManagedAPI, handleRelayMessage, setStoreModule, onSessionDisconnected, shutdownManagedAPI, recoverStuckTasks, runInternalTask } from "./api.js";
+import { initScheduler, startScheduler, stopScheduler } from "./scheduler.js";
+import { notifyDraftsReady } from "./notify.js";
 import { initBilling, setBillingStore } from "./billing.js";
 import { WebSocketClient } from "../ipc/websocket-client.js";
+import { initManagedTelemetry, shutdownManagedTelemetry } from "./telemetry.js";
 // Dynamic store import — Postgres when DATABASE_URL is set, file-based otherwise
 const DATABASE_URL = process.env.DATABASE_URL;
 let store;
@@ -312,6 +315,7 @@ function setupRelayHandlers(wss) {
 }
 // --- Main ---
 async function main() {
+    initManagedTelemetry();
     // 1. Init Vertex AI (optional — managed task execution disabled without it)
     const saJson = process.env.VERTEX_SA_JSON;
     const saPath = process.env.VERTEX_SA_PATH;
@@ -370,6 +374,17 @@ async function main() {
     store.startHeartbeatFlush();
     // 7. Recover tasks stuck in "running" from a previous process
     await recoverStuckTasks();
+    // 8. Start scheduler for automated tasks
+    if (DATABASE_URL) {
+        const pgStore = await import("./store-pg.js");
+        initScheduler({
+            store: pgStore,
+            runTask: runInternalTask,
+            isSessionConnected: isSessionConnected,
+            notify: notifyDraftsReady,
+        });
+        startScheduler();
+    }
     console.error(`
 ╔════════════════════════════════════════════════╗
 ║  Hanzi Managed Backend (deployed)              ║
@@ -392,7 +407,9 @@ main().catch((err) => {
 async function handleShutdown(signal) {
     console.error(`\n[Server] Received ${signal} — shutting down gracefully...`);
     try {
+        stopScheduler();
         await shutdownManagedAPI();
+        await shutdownManagedTelemetry();
     }
     catch (err) {
         console.error(`[Server] Shutdown error:`, err.message);

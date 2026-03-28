@@ -1,6 +1,6 @@
 {
   "name": "hanzi-browse",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Give your AI agent a real browser — click, type, fill forms, test workflows, post content, and read authenticated pages",
   "license": "PolyForm-Noncommercial-1.0.0",
   "author": "hanzili",
@@ -34,6 +34,7 @@
     "@modelcontextprotocol/sdk": "^1.25.3",
     "@sentry/node": "^10.46.0",
     "better-auth": "^1.5.5",
+    "cron-parser": "^5.5.0",
     "pg": "^8.11.3",
     "posthog-node": "^5.21.2",
     "stripe": "^20.4.1",

@@ -24,6 +24,7 @@
  */
 import Stripe from "stripe";
 import { log } from "./log.js";
+import { trackManagedEvent } from "./telemetry.js";
 let stripe = null;
 let S = null;
 /** Set the backing store so billing can persist webhook results. */
@@ -182,6 +183,7 @@ export async function handleWebhook(rawBody, signature) {
                     if (credits > 0) {
                         const newBalance = await S.addCredits(workspaceId, credits);
                         log.info("Credits purchased", { workspaceId }, { credits, newBalance });
+                        trackManagedEvent("credits_purchased", workspaceId, { credits });
                     }
                 }
                 catch (err) {

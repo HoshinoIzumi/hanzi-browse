@@ -43,6 +43,20 @@ export declare function initManagedAPI(relay: WebSocketClient, sessionConnectedC
  * Handle incoming relay messages (tool results from extension).
  */
 export declare function handleRelayMessage(message: any): boolean;
+/**
+ * Run a task internally (used by scheduler — no HTTP, no auth, no billing).
+ * Returns a promise that resolves when the task completes.
+ */
+export declare function runInternalTask(params: {
+    workspaceId: string;
+    browserSessionId: string;
+    task: string;
+    url?: string;
+}): Promise<{
+    taskId: string;
+    answer?: string;
+    status: string;
+}>;
 export declare function startManagedAPI(port?: number): void;
 /**
  * Graceful shutdown: abort all running tasks and update their status.

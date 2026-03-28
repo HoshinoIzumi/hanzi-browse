@@ -12,6 +12,27 @@ if (process.argv[2] === 'setup') {
     catch { /* exit code propagated */ }
     process.exit(0);
 }
+// If invoked as `npx hanzi-browse telemetry [on|off]`, handle inline
+if (process.argv[2] === 'telemetry') {
+    const { isTelemetryEnabled, setTelemetryEnabled } = await import('./telemetry.js');
+    const sub = process.argv[3];
+    if (sub === 'on') {
+        setTelemetryEnabled(true);
+        console.log('Telemetry enabled. Anonymous usage stats help improve Hanzi.');
+    }
+    else if (sub === 'off') {
+        setTelemetryEnabled(false);
+        console.log('Telemetry disabled. No data will be collected.');
+    }
+    else {
+        console.log(`Telemetry is ${isTelemetryEnabled() ? 'enabled' : 'disabled'}.`);
+        console.log('Usage: hanzi-browse telemetry [on|off]');
+    }
+    process.exit(0);
+}
+import { initTelemetry, trackEvent, captureException, shutdownTelemetry } from "./telemetry.js";
+initTelemetry();
+trackEvent("mcp_start");
 /**
  * Hanzi Browse MCP Server
  *
@@ -978,6 +999,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     session.status = "timeout";
                     session.error = `Task still running after ${TASK_TIMEOUT_MS / 60000} minutes. Use browser_screenshot to check progress, then browser_message to continue or browser_stop to end.`;
                 }
+                if (session.status === "complete") {
+                    trackEvent("task_completed", {
+                        steps: session.steps.length,
+                        duration_ms: Date.now() - session.createdAt,
+                    });
+                }
+                else {
+                    trackEvent("task_failed", {
+                        error_category: session.status === "timeout" ? "timeout" : "unknown",
+                        steps: session.steps.length,
+                    });
+                }
                 return {
                     content: [{ type: "text", text: JSON.stringify(formatResult(session), null, 2) }],
                     isError: session.status === "error",
@@ -1068,6 +1101,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
     }
     catch (error) {
+        captureException(error, { tool: name });
         return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
     }
 });
@@ -1110,7 +1144,13 @@ async function main() {
     await server.connect(transport);
     console.error("[MCP] Server running (browser execution: extension-side)");
 }
+process.on("beforeExit", async () => {
+    await shutdownTelemetry();
+});
+process.on("SIGTERM", async () => { await shutdownTelemetry(); process.exit(0); });
+process.on("SIGINT", async () => { await shutdownTelemetry(); process.exit(0); });
 main().catch((error) => {
+    captureException(error, { context: "fatal_startup" });
     console.error("[MCP] Fatal:", error);
     process.exit(1);
 });

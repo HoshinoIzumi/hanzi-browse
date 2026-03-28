@@ -377,3 +377,18 @@ export function ensureDefaultWorkspace() {
     const apiKey = createApiKey(workspace.id, "default");
     return { workspace, apiKey };
 }
+// --- Automation stubs (file store doesn't support automations — Postgres only) ---
+const NOT_SUPPORTED = "Automations require Postgres (set DATABASE_URL)";
+export async function createAutomation(_p) { throw new Error(NOT_SUPPORTED); }
+export async function getAutomation(_id) { return null; }
+export async function listAutomations(_wid) { return []; }
+export async function updateAutomation(_id, _wid, _f) { return null; }
+export async function deleteAutomation(_id, _wid) { return false; }
+export async function getDueAutomations() { return []; }
+export async function createDraftBatch(_p) { return []; }
+export async function listDrafts(_wid, _f) { return []; }
+export async function getDraft(_id) { return null; }
+export async function updateDraft(_id, _wid, _f) { return null; }
+export async function logEngagement(_p) { }
+export async function getRecentlyEngagedHandles(_wid, _d) { return []; }
+export async function listEngagements(_wid, _l) { return []; }
