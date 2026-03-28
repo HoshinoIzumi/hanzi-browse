@@ -69,13 +69,8 @@ export function App() {
   if (loading) return <LoadingSkeleton />;
 
   if (needsAuth) {
-    return (
-      <div class="page" style={{ textAlign: 'center', paddingTop: 80 }}>
-        <h1 style={{ fontSize: 24, marginBottom: 8 }}>Hanzi Dashboard</h1>
-        <p style={{ color: 'var(--muted)', marginBottom: 24 }}>Sign in to manage your workspace.</p>
-        <button class="btn-primary" onClick={redirectToSignIn} style={{ fontSize: 15, padding: '12px 28px' }}>Sign in with Google</button>
-      </div>
-    );
+    redirectToSignIn();
+    return <LoadingSkeleton />;
   }
 
   const firstName = profile?.user?.name?.split(' ')[0] || 'there';
@@ -116,6 +111,7 @@ export function App() {
           hasKeys={hasKeys} hasConnected={hasConnected}
           connectedSession={connectedSession} sessions={sessions}
           loadSessions={loadSessions} loadUsage={loadUsage}
+          setTab={setTab}
         />
       )}
 
@@ -134,7 +130,7 @@ export function App() {
 
 // ─── Getting Started Tab ─────────────────────────────
 
-function GettingStartedTab({ keys, loadKeys, setError, extensionReady, pairing, paired, setPairing, setPaired, hasKeys, hasConnected, connectedSession, sessions, loadSessions, loadUsage }) {
+function GettingStartedTab({ keys, loadKeys, setError, extensionReady, pairing, paired, setPairing, setPaired, hasKeys, hasConnected, connectedSession, sessions, loadSessions, loadUsage, setTab }) {
   const [newKeyName, setNewKeyName] = useState('');
   const [createdKey, setCreatedKey] = useState(null);
   const [taskInput, setTaskInput] = useState('Go to example.com and tell me the page title');
@@ -142,7 +138,6 @@ function GettingStartedTab({ keys, loadKeys, setError, extensionReady, pairing, 
   const [taskAnswer, setTaskAnswer] = useState('');
   const [taskSteps, setTaskSteps] = useState(0);
 
-  // Determine which phase we're in
   const testComplete = taskStatus === 'complete';
 
   const createKey = async () => {
@@ -162,7 +157,8 @@ function GettingStartedTab({ keys, loadKeys, setError, extensionReady, pairing, 
 
   const runTask = async () => {
     const sid = connectedSession?.id || sessions.find(s => s.status === 'connected')?.id;
-    if (!taskInput.trim() || !sid) return;
+    if (!taskInput.trim()) return;
+    if (!sid) { setTaskStatus('error'); setTaskAnswer('No connected browser session found. Try refreshing the page.'); return; }
     setTaskStatus('running'); setTaskAnswer(''); setTaskSteps(0);
     const r = await api('POST', '/v1/tasks', { task: taskInput.trim(), browser_session_id: sid });
     if (!r || r.status !== 201) { setTaskStatus('error'); setTaskAnswer(r?.data?.error || 'Failed'); return; }
@@ -182,8 +178,6 @@ function GettingStartedTab({ keys, loadKeys, setError, extensionReady, pairing, 
     }
     setTaskStatus('error'); setTaskAnswer('Timed out after 3 minutes.');
   };
-
-  const [showManualTest, setShowManualTest] = useState(false);
 
   const INTEGRATION_PROMPT = `Add browser automation to this project using the Hanzi API. Read the codebase first, then ask me:
 
@@ -276,105 +270,168 @@ Read the codebase to understand the stack and project structure, then ask me the
         </div>
       )}
 
-      {/* Ship to users */}
-      {hasKeys && <ShipToUsers />}
-
-      {/* Manual testing (collapsed) */}
+      {/* Pair a browser */}
       {hasKeys && (
-        <>
-          <button class="btn-secondary" style={{ marginTop: 28, fontSize: 13, width: '100%', textAlign: 'left', padding: '10px 14px', borderRadius: 10 }} onClick={() => setShowManualTest(!showManualTest)}>
-            {showManualTest ? '▾' : '▸'} Test it manually — pair your browser and run a task
-          </button>
-          {showManualTest && (
-            <div>
-              <p class="section-desc">Pair your browser and run a task to see it work.</p>
-
-              <div class="card">
-                <div class="step-row">
-                  <span class={`step-badge ${hasConnected ? 'done' : 'active'}`}>{hasConnected ? '✓' : '1'}</span>
-                  <div class="step-content">
-                    <h3>{hasConnected ? 'Browser connected' : 'Connect your browser'}</h3>
-                    <p class="step-explain">{hasConnected ? 'Your Chrome is paired for testing.' : 'Pair your own Chrome to test tasks in it.'}</p>
-                    {!hasConnected && extensionReady && (
-                      <button class="btn-primary" onClick={pairBrowser} disabled={pairing}>{pairing ? 'Connecting...' : 'Connect this browser'}</button>
-                    )}
-                    {!hasConnected && !extensionReady && (
-                      <p class="step-explain"><a href="https://chromewebstore.google.com/detail/hanzi-browse/iklpkemlmbhemkiojndpbhoakgikpmcd" target="_blank">Install the Hanzi extension</a>, then reload this page.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {hasConnected && (
-                <div class="card">
-                  <div class="step-row">
-                    <span class={`step-badge ${testComplete ? 'done' : 'active'}`}>{testComplete ? '✓' : '2'}</span>
-                    <div class="step-content">
-                      <h3>Run a test task</h3>
-                      <p class="step-explain">Tell Hanzi what to do in your connected browser.</p>
-                      {!taskStatus ? (
-                        <div class="inline-form">
-                          <input value={taskInput} onInput={e => setTaskInput(e.target.value)} placeholder="What should Hanzi do?" onKeyDown={e => e.key === 'Enter' && runTask()} />
-                          <button class="btn-primary" onClick={runTask} disabled={!taskInput.trim()}>Run</button>
-                        </div>
-                      ) : taskStatus === 'running' ? (
-                        <div class="task-running"><div class="task-spinner" /><span>Running... ({taskSteps} step{taskSteps !== 1 ? 's' : ''})</span></div>
-                      ) : (
-                        <div class="task-result">
-                          <div class={`task-status-label ${taskStatus}`}>{taskStatus === 'complete' ? '✓ Complete' : '✗ ' + taskStatus}{taskSteps > 0 && ` · ${taskSteps} steps`}</div>
-                          <div class="task-answer">{taskAnswer}</div>
-                          <button class="btn-secondary" onClick={() => { setTaskStatus(null); setTaskAnswer(''); }} style={{ marginTop: 8 }}>Run another</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </>
+        <PairAndTest
+          sessions={sessions} loadSessions={loadSessions}
+          extensionReady={extensionReady} pairing={pairing} paired={paired}
+          pairBrowser={pairBrowser} hasConnected={hasConnected}
+          connectedSession={connectedSession}
+          taskInput={taskInput} setTaskInput={setTaskInput}
+          taskStatus={taskStatus} taskSteps={taskSteps} taskAnswer={taskAnswer}
+          testComplete={testComplete} runTask={runTask}
+          setTaskStatus={setTaskStatus} setTaskAnswer={setTaskAnswer}
+          setTab={setTab}
+        />
       )}
     </div>
   );
 }
 
-// ─── Ship to Users ───────────────────────────────────
+// ─── Pair & Test ────────────────────────────────────
 
-function ShipToUsers() {
+function PairAndTest({ sessions, loadSessions, extensionReady, pairing, paired, pairBrowser, hasConnected, connectedSession, taskInput, setTaskInput, taskStatus, taskSteps, taskAnswer, testComplete, runTask, setTaskStatus, setTaskAnswer, setTab }) {
   const [link, setLink] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [linkGeneratedAt, setLinkGeneratedAt] = useState(null);
+  const [sessionCountAtGen, setSessionCountAtGen] = useState(null);
+  const [linkPaired, setLinkPaired] = useState(false);
+  const [countdown, setCountdown] = useState(null);
 
   const generateLink = async () => {
     setGenerating(true);
+    setLinkPaired(false);
     const r = await api('POST', '/v1/browser-sessions/pair', { label: 'User pairing link' });
     setGenerating(false);
-    if (r?.status === 201) setLink(`${location.origin}/pair/${r.data.pairing_token}`);
+    if (r?.status === 201) {
+      setLink(`${location.origin}/pair/${r.data.pairing_token}`);
+      setLinkGeneratedAt(Date.now());
+      setSessionCountAtGen(sessions.length);
+      setCountdown(300);
+    }
   };
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown === null || countdown <= 0) return;
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  // Detect new session appearing after link was generated
+  useEffect(() => {
+    if (linkGeneratedAt && sessionCountAtGen !== null && sessions.length > sessionCountAtGen && !linkPaired) {
+      setLinkPaired(true);
+    }
+  }, [sessions, linkGeneratedAt, sessionCountAtGen, linkPaired]);
+
+  const expired = countdown !== null && countdown <= 0 && !linkPaired;
+  const fmtTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   return (
     <>
-      <div class="section-label" style={{ marginTop: 28 }}>Pair your users</div>
-      <p class="section-desc">Generate a link. Your user clicks it → extension auto-pairs → done.</p>
+      <div class="section-label" style={{ marginTop: 28 }}>Try it out</div>
+      <p class="section-desc">Pair a browser, then run a task to see it work.</p>
 
+      {/* Step 1: Pair a browser */}
       <div class="card">
-        {!link ? (
-          <div>
-            <p class="step-explain">In production, your backend calls <code>POST /v1/browser-sessions/pair</code> to generate these. Try one now:</p>
-            <button class="btn-primary" onClick={generateLink} disabled={generating} style={{ marginTop: 8 }}>
-              {generating ? 'Generating...' : 'Generate a test pairing link'}
-            </button>
+        <div class="step-row">
+          <span class={`step-badge ${hasConnected || linkPaired ? 'done' : 'active'}`}>{hasConnected || linkPaired ? '✓' : '1'}</span>
+          <div class="step-content">
+            <h3>{hasConnected || linkPaired ? 'Browser paired' : 'Pair a browser'}</h3>
+
+            {hasConnected || linkPaired ? (
+              <p class="step-explain">
+                {linkPaired ? 'A user paired via your link.' : 'Your Chrome is connected for testing.'}
+                {' '}<button class="btn-secondary" onClick={() => setTab('sessions')} style={{ fontSize: 11, padding: '2px 8px' }}>View sessions</button>
+              </p>
+            ) : !link ? (
+              <div>
+                <p class="step-explain">Generate a pairing link to share, or connect this browser directly.</p>
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button class="btn-primary" onClick={generateLink} disabled={generating}>
+                    {generating ? 'Generating...' : 'Generate a link'}
+                  </button>
+                  {extensionReady && (
+                    <button class="btn-secondary" onClick={pairBrowser} disabled={pairing}>
+                      {pairing ? 'Connecting...' : 'Connect this browser'}
+                    </button>
+                  )}
+                </div>
+                {!extensionReady && (
+                  <p class="step-explain" style={{ marginTop: 8 }}>To connect this browser directly, <a href="https://chromewebstore.google.com/detail/hanzi-browse/iklpkemlmbhemkiojndpbhoakgikpmcd" target="_blank">install the extension</a> first.</p>
+                )}
+                <p class="step-explain" style={{ marginTop: 8, fontSize: 12, color: '#999' }}>In production, your backend calls <code>POST /v1/browser-sessions/pair</code> to generate links programmatically.</p>
+              </div>
+            ) : (
+              /* Link generated — show status tracker */
+              <div>
+                <div class="pairing-tracker">
+                  <div class="pairing-step done">
+                    <div class="pairing-dot done" />
+                    <span>Generated</span>
+                  </div>
+                  <div class="pairing-line" />
+                  <div class={`pairing-step ${linkPaired ? 'done' : 'waiting'}`}>
+                    <div class={`pairing-dot ${linkPaired ? 'done' : 'waiting'}`} />
+                    <span>{linkPaired ? 'Paired' : 'Waiting for click...'}</span>
+                  </div>
+                </div>
+
+                <div class="mono-with-copy" style={{ marginTop: 12 }}>
+                  <div class="mono" style={{ fontSize: 12 }}>{link}</div>
+                  <CopyButton text={link} label="Copy link" />
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                  <a href={link} target="_blank" rel="noreferrer" class="btn-primary" style={{ display: 'inline-block', textDecoration: 'none', color: 'white', padding: '6px 14px', borderRadius: 8, fontSize: 13 }}>Open it</a>
+                  <button class="btn-secondary" onClick={() => { setLink(null); setLinkGeneratedAt(null); setSessionCountAtGen(null); setCountdown(null); setLinkPaired(false); }} style={{ fontSize: 12 }}>New link</button>
+                  {!expired && countdown > 0 && (
+                    <span style={{ fontSize: 12, color: countdown < 60 ? 'var(--red)' : 'var(--muted)' }}>Expires in {fmtTime(countdown)}</span>
+                  )}
+                  {expired && (
+                    <span style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600 }}>Expired</span>
+                  )}
+                </div>
+
+                <p class="step-explain" style={{ marginTop: 8 }}>
+                  User needs the <a href="https://chromewebstore.google.com/detail/hanzi-browse/iklpkemlmbhemkiojndpbhoakgikpmcd" target="_blank">Hanzi extension</a> installed.
+                  {extensionReady && !linkPaired && (
+                    <>{' '}Or <button style={{ background: 'none', border: 'none', color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit', fontSize: 'inherit' }} onClick={pairBrowser} disabled={pairing}>{pairing ? 'connecting...' : 'connect this browser'}</button> instead.</>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
-        ) : (
-          <div>
-            <div class="mono-with-copy"><div class="mono" style={{ fontSize: 12 }}>{link}</div><CopyButton text={link} label="Copy link" /></div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <a href={link} target="_blank" rel="noreferrer" class="btn-primary" style={{ display: 'inline-block', textDecoration: 'none', color: 'white', padding: '6px 14px', borderRadius: 8, fontSize: 13 }}>Open it</a>
-              <button class="btn-secondary" onClick={() => setLink(null)} style={{ fontSize: 12 }}>New link</button>
-            </div>
-            <p class="step-explain" style={{ marginTop: 8 }}>Expires in 5 minutes. User needs the <a href="https://chromewebstore.google.com/detail/hanzi-browse/iklpkemlmbhemkiojndpbhoakgikpmcd" target="_blank">Hanzi extension</a> installed.</p>
-          </div>
-        )}
+        </div>
       </div>
+
+      {/* Step 2: Run a test task */}
+      {(hasConnected || linkPaired) && (
+        <div class="card">
+          <div class="step-row">
+            <span class={`step-badge ${testComplete ? 'done' : 'active'}`}>{testComplete ? '✓' : '2'}</span>
+            <div class="step-content">
+              <h3>Run a test task</h3>
+              <p class="step-explain">Tell Hanzi what to do in the paired browser.</p>
+              {!taskStatus ? (
+                <div class="inline-form">
+                  <input value={taskInput} onInput={e => setTaskInput(e.target.value)} placeholder="What should Hanzi do?" onKeyDown={e => e.key === 'Enter' && runTask()} />
+                  <button class="btn-primary" onClick={runTask} disabled={!taskInput.trim()}>Run</button>
+                </div>
+              ) : taskStatus === 'running' ? (
+                <div class="task-running"><div class="task-spinner" /><span>Running... ({taskSteps} step{taskSteps !== 1 ? 's' : ''})</span></div>
+              ) : (
+                <div class="task-result">
+                  <div class={`task-status-label ${taskStatus}`}>{taskStatus === 'complete' ? '✓ Complete' : '✗ ' + taskStatus}{taskSteps > 0 && ` · ${taskSteps} steps`}</div>
+                  <div class="task-answer">{taskAnswer}</div>
+                  <button class="btn-secondary" onClick={() => { setTaskStatus(null); setTaskAnswer(''); }} style={{ marginTop: 8 }}>Run another</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

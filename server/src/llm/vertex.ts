@@ -13,6 +13,11 @@
 
 import { createSign } from "crypto";
 import { readFileSync } from "fs";
+import { ProxyAgent } from "undici";
+
+// Support system HTTP proxy for outbound fetch (e.g. macOS system proxy)
+const PROXY_URL = process.env.https_proxy || process.env.HTTPS_PROXY || process.env.http_proxy || process.env.HTTP_PROXY;
+const proxyDispatcher = PROXY_URL ? new ProxyAgent(PROXY_URL) : undefined;
 import type {
   CallLLMParams,
   LLMResponse,
@@ -105,7 +110,8 @@ async function getAccessToken(): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${header}.${payload}.${signature}`,
-  });
+    ...(proxyDispatcher && { dispatcher: proxyDispatcher }),
+  } as any);
 
   if (!res.ok) {
     const err = await res.text();
@@ -390,7 +396,8 @@ export async function callVertexLLM(params: CallLLMParams): Promise<LLMResponse>
       },
       body,
       signal,
-    });
+      ...(proxyDispatcher && { dispatcher: proxyDispatcher }),
+    } as any);
 
     if (response.status === 429 && attempt < MAX_RETRIES) {
       const retryAfter = response.headers.get("retry-after");

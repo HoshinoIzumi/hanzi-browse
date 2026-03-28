@@ -1,10 +1,50 @@
-# Your agent stops when it needs a browser. Hanzi Browse lets it keep going.
+<div align="center">
 
-**Hanzi Browse** gives your AI agent your real signed-in browser. One tool call, entire task delegated.
+<img src="server/landing/favicon.svg" width="80" alt="Hanzi Browse" />
 
-Works with Claude Code, Cursor, Codex, Windsurf, VS Code, Gemini CLI, Amp, Cline, Roo Code, and more.
+# Hanzi Browse
+
+**Give your AI agent a real browser.**
+
+One tool call. Entire task delegated. Your agent clicks, types, fills forms,<br/>
+reads authenticated pages — in your real signed-in browser.
+
+[![npm](https://img.shields.io/npm/v/hanzi-browse?color=%23cb3837&label=npm)](https://www.npmjs.com/package/hanzi-browse)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iklpkemlmbhemkiojndpbhoakgikpmcd?label=chrome%20web%20store&color=%234285F4)](https://chrome.google.com/webstore/detail/iklpkemlmbhemkiojndpbhoakgikpmcd)
+[![Discord](https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/hahgu5hcA5)
+[![License](https://img.shields.io/badge/license-PolyForm%20NC-green)](LICENSE)
+
+**Works with**
+
+<a href="https://claude.ai/code"><img src="https://browse.hanzilla.co/logos/claude-logo-0p9b6824.png" width="28" height="28" alt="Claude Code" title="Claude Code"></a>&nbsp;&nbsp;
+<a href="https://cursor.com"><img src="https://browse.hanzilla.co/logos/cursor-logo-5jxhjn17.png" width="28" height="28" alt="Cursor" title="Cursor"></a>&nbsp;&nbsp;
+<a href="https://openai.com/codex"><img src="https://browse.hanzilla.co/logos/openai-logo-6323x4zd.png" width="24" height="24" alt="Codex" title="Codex"></a>&nbsp;&nbsp;
+<a href="https://ai.google.dev/gemini-api/docs/cls"><img src="https://browse.hanzilla.co/logos/gemini-logo-1f6kvbwc.png" width="24" height="24" alt="Gemini CLI" title="Gemini CLI"></a>&nbsp;&nbsp;
+<img src="https://browse.hanzilla.co/logos/github-logo-tr9d8349.png" width="24" height="24" alt="VS Code" title="VS Code">&nbsp;&nbsp;
+<img src="https://browse.hanzilla.co/logos/kiro-logo-wk3s9bcy.png" width="24" height="24" alt="Kiro" title="Kiro">&nbsp;&nbsp;
+<img src="https://browse.hanzilla.co/logos/antigravity-logo-szj1gjgv.png" width="24" height="24" alt="Antigravity" title="Antigravity">&nbsp;&nbsp;
+<img src="https://browse.hanzilla.co/logos/opencode-logo-svpy0wcb.png" width="24" height="24" alt="OpenCode" title="OpenCode">
+
+
+<br/>
 
 [![Watch demo](https://img.youtube.com/vi/3tHzg2ps-9w/maxresdefault.jpg)](https://www.youtube.com/watch?v=3tHzg2ps-9w)
+
+</div>
+
+<br/>
+
+## Two ways to use Hanzi
+
+### Use it now — give your agent a browser
+
+![Use it now](docs/diagrams/use-it.svg)
+
+### Build with it — embed browser automation in your product
+
+![Build with it](docs/diagrams/build-with-it.svg)
+
+<br/>
 
 ## Get Started
 
@@ -12,41 +52,58 @@ Works with Claude Code, Cursor, Codex, Windsurf, VS Code, Gemini CLI, Amp, Cline
 npx hanzi-browse setup
 ```
 
-One command. Detects your browsers, installs the extension, finds every AI agent on your machine, configures the MCP server, and installs browser skills. Setup asks how you want to provide the AI:
+One command does everything:
+
+```
+npx hanzi-browse setup
+│
+├── 1. Detect browsers ──── Chrome, Brave, Edge, Arc, Chromium
+│
+├── 2. Install extension ── Opens Chrome Web Store, waits for install
+│
+├── 3. Detect AI agents ─── Claude Code, Cursor, Codex, Windsurf,
+│                           VS Code, Gemini CLI, Amp, Cline, Roo Code
+│
+├── 4. Configure MCP ────── Merges hanzi-browse into each agent's config
+│
+├── 5. Install skills ───── Copies browser skills into each agent
+│
+└── 6. Choose AI mode ───── Managed ($0.05/task) or BYOM (free forever)
+```
 
 - **Managed** — we handle the AI. 20 free tasks/month, then $0.05/task. No API key needed.
-- **Bring your own model** — use your Claude Pro/Max subscription, GPT Plus, or any API key. Free forever, runs locally.
+- **BYOM** — use your Claude Pro/Max subscription, GPT Plus, or any API key. Free forever, runs locally.
 
-<details>
-<summary>Manual setup</summary>
 
-1. **[Install the browser extension](https://chrome.google.com/webstore/detail/iklpkemlmbhemkiojndpbhoakgikpmcd)**
+<br/>
 
-2. Add the MCP server:
+## Examples
 
-**Claude Code:**
-```bash
-claude mcp add browser -- npx -y hanzi-browse
+```
+"Go to Gmail and unsubscribe from all marketing emails from the last week"
+"Apply for the senior engineer position on careers.acme.com"
+"Log into my bank and download last month's statement"
+"Find AI engineer jobs on LinkedIn in San Francisco"
 ```
 
-**Cursor / Windsurf / Others** (mcp.json):
-```json
-{
-  "mcpServers": {
-    "browser": {
-      "command": "npx",
-      "args": ["-y", "hanzi-browse"]
-    }
-  }
-}
-```
+<br/>
 
-3. Credentials — pick one:
-   - Claude Pro/Max: uses `claude login` automatically
-   - GPT Plus / Codex: run `codex login`
-   - API key: set `ANTHROPIC_API_KEY`
-   - Managed: set `HANZI_API_KEY` (get one from [the dashboard](https://api.hanzilla.co/dashboard))
-</details>
+## Skills
+
+The setup wizard installs browser skills into your agent automatically. Skills teach your agent *when* and *how* to use the browser for specific workflows:
+
+| Skill | Description |
+|-------|-------------|
+| `hanzi-browse` | Core skill — when and how to use browser automation |
+| `e2e-tester` | Test your app in a real browser, report bugs with screenshots |
+| `social-poster` | Draft per-platform posts, publish from your signed-in accounts |
+| `linkedin-prospector` | Find prospects, send personalized connection requests |
+| `a11y-auditor` | Run accessibility audits in a real browser |
+| `x-marketer` | Twitter/X marketing workflows |
+
+Open source — [add your own](https://github.com/hanzili/hanzi-browse/tree/main/server/skills).
+
+<br/>
 
 ## Build with Hanzi Browse
 
@@ -74,53 +131,7 @@ console.log(result.answer);
 
 [API reference](https://browse.hanzilla.co/docs.html#build-with-hanzi) · [Dashboard](https://api.hanzilla.co/dashboard) · [Sample integration](examples/partner-quickstart/)
 
-## Examples
-
-```
-"Go to Gmail and unsubscribe from all marketing emails from the last week"
-"Apply for the senior engineer position on careers.acme.com"
-"Log into my bank and download last month's statement"
-"Find AI engineer jobs on LinkedIn in San Francisco"
-```
-
-## Agent Skills
-
-Teach your agent *when* and *how* to use the browser. Install the plugin for your agent:
-
-**Claude Code:**
-```bash
-/plugin install hanzi-browse
-```
-
-**Cursor:**
-```bash
-/add-plugin hanzi-browse
-```
-
-**Codex:**
-```bash
-git clone https://github.com/hanzili/hanzi-browse.git ~/.codex/hanzi-browse
-mkdir -p ~/.agents/skills
-ln -s ~/.codex/hanzi-browse/skills ~/.agents/skills/hanzi-browse
-```
-
-**Gemini CLI:**
-```bash
-gemini extensions install https://github.com/hanzili/hanzi-browse
-```
-
-The plugin loads browser automation skills into your agent's context. It includes workflow skills for common tasks:
-
-| Skill | Description |
-|-------|-------------|
-| `hanzi-browse` | Core skill — when and how to use browser automation |
-| `e2e-tester` | Test your app in a real browser, report bugs with screenshots |
-| `social-poster` | Draft per-platform posts, publish from your signed-in accounts |
-| `linkedin-prospector` | Find prospects, send personalized connection requests |
-| `a11y-auditor` | Run accessibility audits in a real browser |
-| `x-marketer` | Twitter/X marketing workflows |
-
-Open source — [add your own](https://github.com/hanzili/hanzi-browse/tree/main/server/skills).
+<br/>
 
 ## Tools
 
@@ -132,6 +143,8 @@ Open source — [add your own](https://github.com/hanzili/hanzi-browse/tree/main
 | `browser_stop` | Stop a task. |
 | `browser_screenshot` | Capture current page as PNG. |
 
+<br/>
+
 ## Pricing
 
 | | Managed | BYOM |
@@ -142,6 +155,8 @@ Open source — [add your own](https://github.com/hanzili/hanzi-browse/tree/main
 | **Billing** | Only completed tasks. Errors are free. | N/A |
 
 Building a product? [Contact us](mailto:hanzili0217@gmail.com?subject=Partner%20pricing) for volume pricing.
+
+<br/>
 
 ## Development
 
@@ -189,9 +204,21 @@ The defaults in `.env.example` are enough to run the server. Optional services:
 
 Open `chrome://extensions`, enable Developer Mode, click "Load unpacked", select the `dist/` folder.
 
+<br/>
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions.
+
+Good first contributions: new skills, landing pages, site-pattern files, platform testing, translations. Check the [open issues](https://github.com/hanzili/hanzi-browse/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+
+<br/>
+
 ## Community
 
-[Join our Discord](https://discord.gg/hahgu5hcA5) · [Documentation](https://browse.hanzilla.co/docs.html)
+[Discord](https://discord.gg/hahgu5hcA5) · [Documentation](https://browse.hanzilla.co/docs.html) · [Twitter](https://x.com/user)
+
+<br/>
 
 ## Privacy
 

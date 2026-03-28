@@ -1269,7 +1269,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const data = await res.json();
 
           if (data.session_token) {
-            setManagedSession(data.session_token, data.browser_session_id, baseUrl);
+            // Use relay_port from server if provided (handles port fallback)
+            const pairUrl = data.relay_port ? (() => {
+              const u = new URL(baseUrl);
+              u.port = String(data.relay_port);
+              return u.origin;
+            })() : baseUrl;
+            setManagedSession(data.session_token, data.browser_session_id, pairUrl);
             // Persist the captured tab as the session's owned context
             if (capturedTabId && data.browser_session_id) {
               const tabMap = (await chrome.storage.local.get('managed_session_tabs')).managed_session_tabs || {};

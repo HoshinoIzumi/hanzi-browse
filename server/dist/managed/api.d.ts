@@ -38,7 +38,7 @@ export declare function onSessionDisconnected(browserSessionId: string): void;
 /**
  * Initialize the managed API.
  */
-export declare function initManagedAPI(relay: WebSocketClient, sessionConnectedCheck?: (id: string) => boolean): void;
+export declare function initManagedAPI(relay: WebSocketClient, sessionConnectedCheck?: (id: string) => boolean, actualRelayPort?: number): void;
 /**
  * Handle incoming relay messages (tool results from extension).
  */

@@ -36,6 +36,7 @@ export function setStoreModule(storeModule) {
     S = storeModule;
 }
 let isSessionConnectedFn = null;
+let relayPort = 7862;
 // --- State ---
 let relayConnection = null;
 const taskAborts = new Map();
@@ -176,10 +177,13 @@ export function onSessionDisconnected(browserSessionId) {
 /**
  * Initialize the managed API.
  */
-export function initManagedAPI(relay, sessionConnectedCheck) {
+export function initManagedAPI(relay, sessionConnectedCheck, actualRelayPort) {
     relayConnection = relay;
     if (sessionConnectedCheck) {
         isSessionConnectedFn = sessionConnectedCheck;
+    }
+    if (actualRelayPort) {
+        relayPort = actualRelayPort;
     }
 }
 /**
@@ -838,6 +842,38 @@ async function handleRequest(req, res) {
     try {
         // --- Better Auth routes (/api/auth/*) ---
         if (url?.startsWith("/api/auth")) {
+            // GET /api/auth/sign-in/social → convert to internal POST for Better Auth
+            // Better Auth only handles social sign-in as POST, but users land here via browser navigation (GET)
+            if (method === "GET" && url?.startsWith("/api/auth/sign-in/social")) {
+                const parsedUrl = new URL(url, "https://api.hanzilla.co");
+                const provider = parsedUrl.searchParams.get("provider") || "google";
+                const callbackURL = parsedUrl.searchParams.get("callbackURL") || "/dashboard";
+                try {
+                    const internalRes = await fetch("http://127.0.0.1:3456/api/auth/sign-in/social", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ provider, callbackURL }),
+                        redirect: "manual",
+                    });
+                    const data = await internalRes.json().catch(() => null);
+                    if (data?.url) {
+                        // Forward Set-Cookie headers so the browser gets the OAuth state cookie
+                        const cookies = internalRes.headers.getSetCookie?.() || [];
+                        const headers = { Location: data.url };
+                        if (cookies.length > 0)
+                            headers["Set-Cookie"] = cookies;
+                        res.writeHead(302, headers);
+                        res.end();
+                        return;
+                    }
+                }
+                catch (err) {
+                    log.error("Social sign-in redirect error", { requestId }, { error: err.message });
+                }
+                res.writeHead(302, { Location: "/dashboard" });
+                res.end();
+                return;
+            }
             const auth = createAuth();
             if (auth) {
                 // Use Better Auth's built-in Node handler for correct OAuth flow
@@ -1043,6 +1079,7 @@ async function handleRequest(req, res) {
                 browser_session_id: session.id,
                 session_token: session.sessionToken,
                 workspace_id: session.workspaceId,
+                relay_port: relayPort,
             });
             return;
         }

@@ -68,8 +68,7 @@ export async function importCLICredentials() {
 
   // Try relay first (no native host needed), then fall back to native host
   try {
-    const result = await importCLIViaRelay();
-    return result;
+    return await importCLIViaRelay();
   } catch (relayErr) {
     console.log('[OAuth] Relay not available, trying native host:', relayErr.message);
   }

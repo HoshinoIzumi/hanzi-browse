@@ -46,6 +46,7 @@ export function setStoreModule(storeModule: typeof fileStore): void {
 }
 
 let isSessionConnectedFn: ((id: string) => boolean) | null = null;
+let relayPort: number = 7862;
 
 // --- State ---
 
@@ -211,11 +212,15 @@ export function onSessionDisconnected(browserSessionId: string): void {
  */
 export function initManagedAPI(
   relay: WebSocketClient,
-  sessionConnectedCheck?: (id: string) => boolean
+  sessionConnectedCheck?: (id: string) => boolean,
+  actualRelayPort?: number
 ): void {
   relayConnection = relay;
   if (sessionConnectedCheck) {
     isSessionConnectedFn = sessionConnectedCheck;
+  }
+  if (actualRelayPort) {
+    relayPort = actualRelayPort;
   }
 }
 
@@ -1173,6 +1178,7 @@ async function handleRequest(
         browser_session_id: session.id,
         session_token: session.sessionToken,
         workspace_id: session.workspaceId,
+        relay_port: relayPort,
       });
       return;
     }

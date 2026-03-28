@@ -21,8 +21,7 @@ export async function importCodexCredentials() {
 
   // Try relay first (no native host needed), then fall back to native host
   try {
-    const result = await importCodexViaRelay();
-    return result;
+    return await importCodexViaRelay();
   } catch (relayErr) {
     console.log('[Codex OAuth] Relay not available, trying native host:', relayErr.message);
   }

@@ -36,6 +36,7 @@ else {
 // --- Config ---
 const PORT = parseInt(process.env.PORT || "3456", 10);
 const RELAY_PORT = parseInt(process.env.RELAY_PORT || "7862", 10);
+let actualRelayPort = RELAY_PORT; // tracks the port the relay is actually listening on
 // Shared secret between the managed backend and the relay.
 // Only clients registering with this secret can route to managed sessions.
 import { randomBytes, timingSafeEqual } from "crypto";
@@ -74,21 +75,39 @@ function startRelay() {
     // In production, bind to loopback — Caddy reverse-proxies from the internet.
     // Set RELAY_HOST=0.0.0.0 for local dev without a reverse proxy.
     const RELAY_HOST = process.env.RELAY_HOST || (process.env.NODE_ENV === "production" ? "127.0.0.1" : "0.0.0.0");
-    const wss = new WebSocketServer({
-        port: RELAY_PORT,
-        host: RELAY_HOST,
-        maxPayload: RELAY_MAX_MESSAGE_BYTES,
-    });
-    wss.on("listening", () => {
-        console.error(`[Relay] Listening on ws://${RELAY_HOST}:${RELAY_PORT} (max ${RELAY_MAX_CONNECTIONS} connections, max ${RELAY_MAX_MESSAGE_BYTES / 1024 / 1024}MB/msg)`);
-    });
-    wss.on("error", (err) => {
-        if (err.code === "EADDRINUSE") {
-            console.error(`[Relay] Port ${RELAY_PORT} in use — relay already running`);
-            return;
+    return new Promise((resolve, reject) => {
+        function tryPort(port) {
+            const wss = new WebSocketServer({
+                port,
+                host: RELAY_HOST,
+                maxPayload: RELAY_MAX_MESSAGE_BYTES,
+            });
+            wss.on("listening", () => {
+                actualRelayPort = port;
+                console.error(`[Relay] Listening on ws://${RELAY_HOST}:${port} (max ${RELAY_MAX_CONNECTIONS} connections, max ${RELAY_MAX_MESSAGE_BYTES / 1024 / 1024}MB/msg)`);
+                setupRelayHandlers(wss);
+                resolve();
+            });
+            wss.on("error", (err) => {
+                if (err.code === "EADDRINUSE") {
+                    if (port < RELAY_PORT + 3) {
+                        console.error(`[Relay] Port ${port} in use — trying ${port + 1}`);
+                        tryPort(port + 1);
+                    }
+                    else {
+                        console.error(`[Relay] Ports ${RELAY_PORT}-${port} all in use — relay not started`);
+                        reject(new Error("All relay ports in use"));
+                    }
+                    return;
+                }
+                console.error(`[Relay] Error: ${err.message}`);
+                reject(err);
+            });
         }
-        console.error(`[Relay] Error: ${err.message}`);
+        tryPort(RELAY_PORT);
     });
+}
+function setupRelayHandlers(wss) {
     wss.on("connection", (ws) => {
         // Enforce max connections
         if (wss.clients.size > RELAY_MAX_CONNECTIONS) {
@@ -320,13 +339,12 @@ async function main() {
         console.error(`[Server] WARNING: Auto-bootstrapped default workspace. Use explicit workspace provisioning for multi-tenant.`);
     }
     console.error(`[Server] Workspace: ${workspace.id}, API key: ${keyDisplay}`);
-    // 3. Start relay
-    startRelay();
+    // 3. Start relay (waits until listening)
+    await startRelay();
     // 4. Connect to relay as internal client
-    await new Promise((r) => setTimeout(r, 500)); // Let relay start
     const relay = new WebSocketClient({
         role: "mcp",
-        relayUrl: `ws://127.0.0.1:${RELAY_PORT}`,
+        relayUrl: `ws://127.0.0.1:${actualRelayPort}`,
         autoStartRelay: false,
         registerExtra: { relay_secret: RELAY_INTERNAL_SECRET },
     });
@@ -347,7 +365,7 @@ async function main() {
     initBilling();
     setBillingStore(store);
     // 6. Start API — pass session connectivity checker
-    initManagedAPI(relay, isSessionConnected);
+    initManagedAPI(relay, isSessionConnected, actualRelayPort);
     startManagedAPI(PORT);
     store.startHeartbeatFlush();
     // 7. Recover tasks stuck in "running" from a previous process
@@ -357,7 +375,7 @@ async function main() {
 ║  Hanzi Managed Backend (deployed)              ║
 ║                                                ║
 ║  API:     http://${process.env.NODE_ENV === "production" ? "127.0.0.1" : "0.0.0.0"}:${String(PORT).padEnd(5)}              ║
-║  Relay:   ws://${process.env.NODE_ENV === "production" ? "127.0.0.1" : "0.0.0.0"}:${String(RELAY_PORT).padEnd(5)}               ║
+║  Relay:   ws://${process.env.NODE_ENV === "production" ? "127.0.0.1" : "0.0.0.0"}:${String(actualRelayPort).padEnd(5)}               ║
 ║  LLM:     Vertex AI (Gemini 2.5 Flash)         ║
 ║  Key:     ${keyDisplay.padEnd(33)} ║
 ╚════════════════════════════════════════════════╝

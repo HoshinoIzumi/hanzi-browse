@@ -161,6 +161,26 @@
             background: linear-gradient(135deg, var(--green), #1f3a2d);
         }
 
+        .btn-nav-signin {
+            min-height: 36px;
+            padding: 0 16px;
+            font-size: 13px;
+        }
+
+        .btn-signin-hero {
+            border: none;
+            background: none;
+            color: var(--ink);
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            padding: 0 8px;
+        }
+        .btn-signin-hero:hover {
+            color: var(--accent);
+        }
+
         .btn-purple {
             color: #fff;
             border-color: transparent;
@@ -796,6 +816,7 @@
                 <a class="link-pill" href="#pricing">Pricing</a>
                 <a class="link-pill" href="https://discord.gg/hahgu5hcA5" target="_blank" rel="noreferrer" aria-label="Discord (opens in new tab)">Discord</a>
                 <a class="link-pill" href="https://github.com/hanzili/hanzi-browse" target="_blank" rel="noreferrer" aria-label="GitHub (opens in new tab)">GitHub</a>
+                <button class="btn btn-green btn-nav-signin" onclick="hanziSignIn()" aria-label="Sign in to dashboard">Sign in</button>
             </nav>
         </header>
 
@@ -808,6 +829,7 @@
                     <div class="hero-actions">
                         <a class="btn btn-green" href="#use-hanzi">Use Hanzi</a>
                         <a class="btn btn-purple" href="#build-with-hanzi">Build with Hanzi</a>
+                        <button class="btn btn-signin-hero" onclick="hanziSignIn()">Sign in &rarr;</button>
                     </div>
                 </div>
 
@@ -946,7 +968,7 @@
                         <div class="path-steps">
                             <div class="path-step">
                                 <span class="step-num step-num-purple">1</span>
-                                <a href="https://api.hanzilla.co/api/auth/sign-in/social" target="_blank" rel="noreferrer" style="color: inherit; font-weight: 600;" aria-label="Sign in (opens in new tab)">Sign in</a> and create an API key
+                                <button onclick="hanziSignIn()" style="background: none; border: none; color: inherit; font-weight: 600; font-size: inherit; font-family: inherit; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px;">Sign in</button> and create an API key
                             </div>
                             <div class="path-step">
                                 <span class="step-num step-num-purple">2</span>
@@ -1070,6 +1092,20 @@ console.log(result.answer);</pre>
             setTimeout(() => {
                 button.textContent = original;
             }, 1500);
+        }
+
+        async function hanziSignIn() {
+            try {
+                const res = await fetch('/api/auth/sign-in/social', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ provider: 'google', callbackURL: '/dashboard' }),
+                });
+                const data = await res.json().catch(() => null);
+                if (data?.url) { window.location.href = data.url; return; }
+            } catch {}
+            window.location.href = '/api/auth/sign-in/social?provider=google&callbackURL=/dashboard';
         }
 
         function loadVideo(el) {
