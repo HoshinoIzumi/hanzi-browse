@@ -105,9 +105,7 @@ function isInteractive(node) {
   }
 
   // Cursor pointer
-  if (node.snapshotNode?.cursorStyle === 'pointer') return true;
-
-  return false;
+  return node.snapshotNode?.cursorStyle === 'pointer';
 }
 
 /**
@@ -135,9 +133,7 @@ function shouldInclude(node) {
 
   // Include elements with children (structural)
   if (node.children && node.children.length > 0) return true;
-  if (node.contentDocument) return true;
-
-  return false;
+  return !!node.contentDocument;
 }
 
 /**
@@ -169,15 +165,13 @@ function buildAttributesString(node) {
   }
 
   // AX node value for form elements (reflects actual typed value)
-  if (node.axNode && ['input', 'textarea', 'select'].includes((node.nodeName || '').toLowerCase())) {
-    if (node.axNode.properties) {
-      const valuetext = node.axNode.properties.valuetext;
-      const value = node.axNode.properties.value;
-      if (valuetext && String(valuetext).trim()) {
-        attrs.value = String(valuetext).trim();
-      } else if (value && String(value).trim()) {
-        attrs.value = String(value).trim();
-      }
+  if (node.axNode && ['input', 'textarea', 'select'].includes((node.nodeName || '').toLowerCase()) && node.axNode.properties) {
+    const valuetext = node.axNode.properties.valuetext;
+    const value = node.axNode.properties.value;
+    if (valuetext && String(valuetext).trim()) {
+      attrs.value = String(valuetext).trim();
+    } else if (value && String(value).trim()) {
+      attrs.value = String(value).trim();
     }
   }
 

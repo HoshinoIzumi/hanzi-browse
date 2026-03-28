@@ -88,9 +88,7 @@ function isNodeVisible(snapshotNode, absolutePosition, viewportHeight, viewportT
   if (absolutePosition.width <= 0 || absolutePosition.height <= 0) return false;
 
   // Within viewport + threshold (browser-use default: viewport + 1000px)
-  if (absolutePosition.y > viewportHeight + viewportThreshold) return false;
-
-  return true;
+  return absolutePosition.y <= viewportHeight + viewportThreshold;
 }
 
 /**

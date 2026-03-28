@@ -412,7 +412,7 @@ async function handleFormInput(payload, sendResponse) {
            (element instanceof HTMLInputElement &&
             ['text', 'search', 'url', 'tel', 'password', 'email'].includes(element.type))) &&
           element.setSelectionRange) {
-        try { element.setSelectionRange(element.value.length, element.value.length); } catch(e) {}
+        try { element.setSelectionRange(element.value.length, element.value.length); } catch { /* not all inputs support setSelectionRange */ }
       }
       const type = element instanceof HTMLTextAreaElement ? 'textarea' : (element.type || 'text');
       sendResponse({

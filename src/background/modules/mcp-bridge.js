@@ -47,8 +47,9 @@ export async function setManagedSession(sessionToken, browserSessionId, apiUrl) 
         const domain = url.hostname.replace(/^api\./, 'relay.');
         managedRelayUrl = `wss://${domain}`;
       } else {
-        // Local dev: relay on same host, port 7862
-        managedRelayUrl = `ws://${url.hostname}:7862`;
+        // Local dev: relay on same host, use port from URL (set by register response) or default 7862
+        const relayPort = url.port || '7862';
+        managedRelayUrl = `ws://${url.hostname}:${relayPort}`;
       }
     } catch {
       managedRelayUrl = null;
@@ -684,7 +685,7 @@ async function handleMcpCommand(command) {
                 managedSessionTabs.delete(execSessionId);
               }
             }
-          } catch {}
+          } catch { /* tab may already be closed */ }
         }
 
         // Verify the tab still exists — it may have been closed
@@ -749,7 +750,7 @@ async function handleMcpCommand(command) {
           try {
             const tab = await chrome.tabs.get(tabId);
             tabContext = { tabId, windowId: tab.windowId, url: tab.url, browserSessionId: execSessionId };
-          } catch {}
+          } catch { /* tab may not exist */ }
         }
 
         sendToMcpRelay({
