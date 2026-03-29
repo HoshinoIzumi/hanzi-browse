@@ -14,6 +14,7 @@ import { randomUUID } from 'crypto';
 import { isRelayRunning } from '../relay/auto-start.js';
 import { WebSocketClient } from '../ipc/websocket-client.js';
 import { detectCredentialSources as detectSources, checkCredentialFlowResult, } from './detect-credentials.js';
+import { initTelemetry, trackEvent, shutdownTelemetry } from '../telemetry.js';
 // ── Style ──────────────────────────────────────────────────────────────
 const c = {
     green: (s) => `\x1b[32m${s}\x1b[0m`,
@@ -695,6 +696,8 @@ async function installSkills(agents, isInteractive) {
 }
 // ── Main ───────────────────────────────────────────────────────────────
 export async function runSetup(options = {}) {
+    initTelemetry();
+    trackEvent("setup_started");
     const registry = getAgentRegistry();
     const only = options.only;
     const interactive = options.yes ? false : (process.stdin.isTTY ?? false);
@@ -746,8 +749,10 @@ export async function runSetup(options = {}) {
     for (const agent of registry) {
         if (only && agent.slug !== only)
             continue;
-        if (agent.detect())
+        if (agent.detect()) {
             detected.push(agent);
+            trackEvent("setup_agent_detected", { agent: agent.name });
+        }
     }
     sp1.stop(interactive
         ? `${c.green('✓')}  Found ${c.bold(String(detected.length))} agent${detected.length === 1 ? '' : 's'} on this machine`
@@ -780,6 +785,8 @@ export async function runSetup(options = {}) {
         else {
             log(`  ●  No agents found. Add manually: ${JSON.stringify({ mcpServers: { "hanzi-browser": MCP_ENTRY } })}`);
         }
+        trackEvent("setup_failed", { error_category: "no_agents_detected" });
+        await shutdownTelemetry();
         return;
     }
     // ── Step 2: Configure agents ──
@@ -910,6 +917,8 @@ export async function runSetup(options = {}) {
             log(`     ${errors} agent(s) failed — check errors above.`);
         log('');
     }
+    trackEvent("setup_completed", { agent: detected.map(a => a.name).join(", ") });
+    await shutdownTelemetry();
     rl?.close();
     setTimeout(() => process.exit(0), 200);
 }

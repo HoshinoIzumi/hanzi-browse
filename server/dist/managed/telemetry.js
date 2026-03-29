@@ -17,6 +17,10 @@ export function initManagedTelemetry() {
             dsn: sentryDsn,
             environment: process.env.NODE_ENV || "development",
             tracesSampleRate: 0.2,
+            beforeSend(event) {
+                delete event.server_name;
+                return event;
+            },
         });
     }
     if (posthogKey) {
