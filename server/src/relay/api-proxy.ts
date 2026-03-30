@@ -50,7 +50,13 @@ async function getFreshClaudeCredentials(log: (message: string) => void): Promis
   return refreshed;
 }
 
-async function sendProxyStream(ws: WebSocket, requestId: string, response: Response): Promise<void> {
+async function sendProxyStream(
+  ws: WebSocket,
+  requestId: string,
+  response: Response,
+  options: { endOnCompleted?: boolean } = {},
+): Promise<void> {
+  const { endOnCompleted = false } = options;
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -76,6 +82,18 @@ async function sendProxyStream(ws: WebSocket, requestId: string, response: Respo
             requestId,
             data: event,
           }));
+        }
+
+        if (endOnCompleted && event.type === 'response.completed') {
+          try {
+            await reader.cancel();
+          } catch {
+            // Ignore cancellation errors after terminal response event.
+          }
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'proxy_stream_end', requestId }));
+          }
+          return;
         }
       } catch {
         // Skip malformed JSON chunks.
@@ -163,7 +181,7 @@ export async function handleApiProxy(
       return;
     }
 
-    await sendProxyStream(ws, requestId, response);
+    await sendProxyStream(ws, requestId, response, { endOnCompleted: true });
   } catch (err: any) {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({
