@@ -70,6 +70,23 @@ export interface UsageSummary {
   taskCount: number;
 }
 
+export interface TaskStep {
+  step: number;
+  status: string;
+  toolName?: string;
+  toolInput?: any;
+  output?: string;
+  screenshot?: string;
+  createdAt?: number;
+  durationMs?: number;
+}
+
+export interface CreditBalance {
+  freeRemaining: number;
+  creditBalance: number;
+  freeTasksPerMonth: number;
+}
+
 // --- Client ---
 
 export class HanziClient {
@@ -134,6 +151,11 @@ export class HanziClient {
     }));
   }
 
+  /** Delete a browser session. The user will need to re-pair. */
+  async deleteSession(sessionId: string): Promise<void> {
+    await this.request("DELETE", `/v1/browser-sessions/${sessionId}`);
+  }
+
   // --- Tasks ---
 
   /** Start a task. Returns immediately with the task ID. */
@@ -162,6 +184,27 @@ export class HanziClient {
   async listTasks(): Promise<TaskRun[]> {
     const data = await this.request("GET", "/v1/tasks");
     return data.tasks.map((t: any) => this.normalizeTask(t));
+  }
+
+  /** Get the execution timeline for a task. Useful for debugging. */
+  async getTaskSteps(taskId: string): Promise<TaskStep[]> {
+    const data = await this.request("GET", `/v1/tasks/${taskId}/steps`);
+    return (data.steps || []).map((s: any) => ({
+      step: s.step,
+      status: s.status,
+      toolName: s.tool_name ?? s.toolName,
+      toolInput: s.tool_input ?? s.toolInput,
+      output: s.output,
+      screenshot: s.screenshot,
+      createdAt: s.created_at ?? s.createdAt,
+      durationMs: s.duration_ms ?? s.durationMs,
+    }));
+  }
+
+  /** Get the screenshot captured at a specific step of a task. Returns base64 PNG data. */
+  async getScreenshot(taskId: string, step: number): Promise<string> {
+    const data = await this.request("GET", `/v1/tasks/${taskId}/screenshots/${step}`);
+    return data.screenshot;
   }
 
   /**
@@ -200,6 +243,16 @@ export class HanziClient {
     return this.request("GET", "/v1/usage");
   }
 
+  /** Get credit balance and free tier status. */
+  async getCredits(): Promise<CreditBalance> {
+    const data = await this.request("GET", "/v1/billing/credits");
+    return {
+      freeRemaining: data.free_remaining,
+      creditBalance: data.credit_balance,
+      freeTasksPerMonth: data.free_tasks_per_month,
+    };
+  }
+
   // --- Health ---
 
   /** Check if the API is reachable. Does not require auth. */
@@ -215,16 +268,21 @@ export class HanziClient {
   // --- Helpers ---
 
   private normalizeTask(data: any): TaskRun {
+    const usage = data.usage || {};
     return {
       id: data.id,
       status: data.status,
       task: data.task,
       answer: data.answer,
       steps: data.steps || 0,
-      usage: data.usage || { inputTokens: 0, outputTokens: 0, apiCalls: 0 },
-      browserSessionId: data.browser_session_id,
-      createdAt: data.created_at,
-      completedAt: data.completed_at,
+      usage: {
+        inputTokens: usage.inputTokens ?? usage.input_tokens ?? 0,
+        outputTokens: usage.outputTokens ?? usage.output_tokens ?? 0,
+        apiCalls: usage.apiCalls ?? usage.api_calls ?? 0,
+      },
+      browserSessionId: data.browser_session_id ?? data.browserSessionId,
+      createdAt: data.created_at ?? data.createdAt,
+      completedAt: data.completed_at ?? data.completedAt,
     };
   }
 }
