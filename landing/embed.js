@@ -278,8 +278,8 @@
           this.sessionId = connected.id;
           this.state = 'connected';
           this.render();
-          this.startHeartbeat();
           this.onConnected(this.sessionId);
+          this.startHeartbeat();
           return;
         }
       } catch {}
@@ -320,8 +320,8 @@
               this.sessionId = connected.id;
               this.state = 'connected';
               this.render();
-              this.startHeartbeat();
               this.onConnected(this.sessionId);
+              this.startHeartbeat();
             }
           } catch {}
         }, 2000);
@@ -339,35 +339,6 @@
         this.state = 'pair';
         this.render();
       }
-    }
-
-    bindEvents() {
-      if (!this.container) return;
-      this.container.querySelectorAll('[data-action]').forEach(el => {
-        const action = el.getAttribute('data-action');
-        el.addEventListener('click', () => {
-          if (action === 'checkExtension') this.checkExtension();
-          if (action === 'startPairing') this.startPairing();
-        });
-      });
-    }
-
-    startHeartbeat() {
-      if (this.heartbeatInterval) return;
-      this.heartbeatInterval = setInterval(async () => {
-        try {
-          const data = await this.api('GET', '/v1/browser-sessions');
-          const session = (data.sessions || []).find(s => s.id === this.sessionId);
-          if (!session || session.status !== 'connected') {
-            this.sessionId = null;
-            this.state = 'pair';
-            this.render();
-            this.onDisconnected(this.sessionId);
-            clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = null;
-          }
-        } catch {}
-      }, 15000);
     }
 
     // Render based on state
@@ -424,6 +395,35 @@
         </div>
       `;
       this.bindEvents();
+    }
+
+    bindEvents() {
+      if (!this.container) return;
+      this.container.querySelectorAll('[data-action]').forEach(el => {
+        const action = el.getAttribute('data-action');
+        el.addEventListener('click', () => {
+          if (action === 'checkExtension') this.checkExtension();
+          if (action === 'startPairing') this.startPairing();
+        });
+      });
+    }
+
+    startHeartbeat() {
+      if (this.heartbeatInterval) return;
+      this.heartbeatInterval = setInterval(async () => {
+        try {
+          const data = await this.api('GET', '/v1/browser-sessions');
+          const session = (data.sessions || []).find(s => s.id === this.sessionId);
+          if (!session || session.status !== 'connected') {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+            this.sessionId = null;
+            this.state = 'pair';
+            this.render();
+            this.onDisconnected(this.sessionId);
+          }
+        } catch {}
+      }, 15000);
     }
 
     // Cleanup

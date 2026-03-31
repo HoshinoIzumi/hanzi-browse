@@ -81,6 +81,7 @@ export interface TaskRun {
   usage: { inputTokens: number; outputTokens: number; apiCalls: number };
   createdAt: number;
   completedAt?: number;
+  webhookUrl?: string;
 }
 
 export interface UsageEvent {
@@ -497,6 +498,7 @@ export async function createTaskRun(params: {
   url?: string;
   context?: string;
   browserSessionId?: string;
+  webhookUrl?: string;
 }): Promise<TaskRun> {
   const id = randomUUID();
   const now = Date.now();
