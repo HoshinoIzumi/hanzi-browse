@@ -157,7 +157,12 @@ app.get("/v1/browser-sessions", async (req, res) => {
 app.post("/v1/browser-sessions/pair", async (req, res) => {
   try {
     const data = await hanziClient.createPairingToken();
-    res.json({ pairing_token: data.pairingToken, expires_at: data.expiresAt, expires_in_seconds: data.expiresInSeconds });
+    res.json({
+      pairing_token: data.pairingToken,
+      pairing_url: `${HANZI_URL}/pair/${data.pairingToken}`,
+      expires_at: data.expiresAt,
+      expires_in_seconds: data.expiresInSeconds,
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get("/api/sessions", async (req, res) => {

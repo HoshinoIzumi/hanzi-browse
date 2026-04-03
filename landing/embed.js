@@ -305,8 +305,9 @@
         }
 
         // Open pairing URL
-        // Pairing link must be the full Hanzi URL (opens in new tab, not relative)
-        const pairingUrl = (this.apiUrl || API_URL) + '/pair/' + data.pairing_token;
+        // Use server-provided pairing_url if available (handles proxy setups),
+        // otherwise construct from apiUrl
+        const pairingUrl = data.pairing_url || (this.apiUrl || API_URL) + '/pair/' + data.pairing_token;
         window.open(pairingUrl, '_blank');
 
         // Poll for connection
